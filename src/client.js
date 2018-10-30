@@ -6,15 +6,17 @@
  * file that was distributed with this source code.
  */
 
-const {ApolloLink, execute, makePromise} = require('apollo-link');
+const {ApolloLink, execute, makePromise, split} = require('apollo-link');
 const {setContext} = require('apollo-link-context');
 const {onError} = require('apollo-link-error');
-const {createHttpLink} = require('apollo-link-http');
+const {HttpLink} = require('apollo-link-http');
+const {WebSocketLink} = require('apollo-link-ws');
 
 const EventEmitter = require('eventemitter3');
 const fetch = require('cross-fetch');
 const gql = require('graphql-tag');
 
+const DEFAULT_SCOPE = 'api:read';
 const DEFAULT_TOKEN_URL = 'https://panflux.app/oauth/v2/token';
 
 /**
@@ -58,7 +60,7 @@ module.exports = class Client extends EventEmitter {
                 grant_type: 'client_credentials',
                 client_id: this._opts.clientID,
                 client_secret: this._opts.clientSecret,
-                scope: 'api:read',
+                scope: this._opts.scope || DEFAULT_SCOPE,
             }),
             headers: {
                 'Content-Type': 'application/json',
@@ -81,6 +83,7 @@ module.exports = class Client extends EventEmitter {
     async connect() {
         return (this._token ? Promise.resolve(this._token) : this.authenticate())
             .then((token) => {
+                const uri = (token.edges[0] || '') + '/graphql';
                 return ApolloLink.from([
                     onError((params) => {
                         this.emit('error', params);
@@ -88,19 +91,30 @@ module.exports = class Client extends EventEmitter {
                     setContext(() => ({
                         headers: {
                             accept: 'application/json',
-                            authorization: token.access_token ? `Bearer ${token.access_token}` : '',
+                            authorization: `Bearer ${token.access_token}`,
                         },
                     })),
-                    createHttpLink({
-                        uri: (token.edges[0] || '') + '/graphql',
-                        fetch,
-                    }),
+                    split(({query: {definitions}}) =>
+                        definitions.some(
+                            ({kind, operation}) =>
+                                kind === 'OperationDefinition' && operation === 'subscription',
+                        ),
+                    new WebSocketLink({uri: uri.replace(/^http/, 'ws'), options: {
+                        reconnect: true,
+                        reconnectionAttempts: 3,
+                        connectionParams: {
+                            authToken: token.access_token,
+                        },
+                    }, webSocketImpl: require('ws')}),
+                    new HttpLink({uri, fetch}),
+                    ),
                 ]);
             })
         ;
     }
 
     /**
+     * Execute a GraphQL query. Do not wrap the query in `query { ... }` markers.
      *
      * @param {string} query
      * @return {Promise<object>} The raw query response
@@ -113,6 +127,23 @@ module.exports = class Client extends EventEmitter {
     }
 
     /**
+     * Start a GraphQL subscription. Do not wrap the query in `subscription { ... }` markers.
+     *
+     * @param {string} query
+     * @param {function} cb Callback function to be called when events are returned.
+     * @return {Promise<object>} The raw query response
+     */
+    async subscribe(query, cb) {
+        return this.getLink()
+            .then((link) => {
+                const subscription = execute(link, {query: gql`subscription {${query}}`});
+                subscription.subscribe({next: cb});
+                return subscription;
+            })
+        ;
+    }
+
+    /**
      * Return a promise resolving to an ApolloLink instance.
      *
      * @return {Promise<ApolloLink>}
@@ -121,6 +152,7 @@ module.exports = class Client extends EventEmitter {
         if (!this._apollo) {
             this._apollo = this.connect();
         }
+        // TODO: Detect expired tokens
         return this._apollo;
     }
 

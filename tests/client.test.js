@@ -43,9 +43,17 @@ test('Invalid query', async () => {
     });
 });
 
+test('Subscription', async () => {
+    return Client.init(testConfig).subscribe('ping', data => {
+        console.log(data);
+    }).then(subscriber => {
+        // TO-DO
+    });
+});
+
 test('Token reuse', async () => {
     const client1 = Client.init(testConfig);
-    const client2 = Client.init(testConfig, await(client1.authenticate()));
+    const client2 = Client.init(testConfig, await client1.authenticate());
 
     const onNewToken = jest.fn();
     client2.on('newToken', onNewToken);
