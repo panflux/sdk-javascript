@@ -31,6 +31,11 @@ test('Client instantiation', async () => {
     return client.query('me { id, name }');
 });
 
+test('Bad config', () => {
+    expect(() => Client.init()).toThrow('Required property');
+    expect(() => Client.init({tokenURL: 'https://example.org/'})).toThrow('Required property');
+});
+
 test('Invalid query', async () => {
     const onError = jest.fn();
 
@@ -41,6 +46,12 @@ test('Invalid query', async () => {
         expect(onError).toBeCalled();
         expect(error.message).toContain('Response not successful');
     });
+});
+
+test('Invalid credentials', async () => {
+    const client = Client.init(Object.assign({}, testConfig, {clientID: '684'}));
+
+    await expect(client.authenticate()).rejects.toThrow(Error);
 });
 
 test('Subscription', async () => {

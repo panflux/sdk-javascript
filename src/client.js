@@ -32,7 +32,13 @@ module.exports = class Client extends EventEmitter {
     constructor(opts, token) {
         super();
 
-        // TODO: Check options for validity
+        opts = opts || {};
+        ['tokenURL', 'clientID', 'clientSecret'].forEach((field) => {
+            if (!(field in opts) || typeof opts[field] !== 'string') {
+                throw Error(`Required property '${field}' is either not set or not a string value`);
+            }
+        });
+
         this._opts = opts;
         if (token) {
             this._token = Promise.resolve(token);
@@ -66,7 +72,12 @@ module.exports = class Client extends EventEmitter {
                 'Content-Type': 'application/json',
             },
         })
-            .then((response) => response.json())
+            .then((response) => {
+                if (response.status !== 200) {
+                    throw Error(response.statusText);
+                }
+                return response.json();
+            })
             .then((token) => {
                 this._token = token;
                 this.emit('newToken', token);
