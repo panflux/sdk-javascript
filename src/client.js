@@ -135,11 +135,9 @@ module.exports = class Client extends EventEmitter {
      */
     async subscribe(query, cb) {
         return this.getLink()
-            .then((link) => {
-                const subscription = execute(link, {query: gql`subscription {${query}}`});
-                subscription.subscribe({next: cb});
-                return subscription;
-            })
+            .then((link) => execute(link, {query: gql`subscription {${query}}`}).subscribe({
+                next: (response) => cb(response.data),
+            }))
         ;
     }
 

@@ -8,7 +8,7 @@
     "main": "index.js",
     "scripts": {
         "lint": "eslint --fix src",
-        "test": "eslint src && jest",
+        "test": "eslint src && jest --detectOpenHandles  --forceExit",
         "test-insecure": "eslint src && NODE_TLS_REJECT_UNAUTHORIZED=0 jest"
     },
     "dependencies": {

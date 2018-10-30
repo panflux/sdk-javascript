@@ -44,10 +44,17 @@ test('Invalid query', async () => {
 });
 
 test('Subscription', async () => {
-    return Client.init(testConfig).subscribe('ping', data => {
-        console.log(data);
-    }).then(subscriber => {
-        // TO-DO
+    let client, subscription;
+    return new Promise(resolve => {
+        client = Client.init(testConfig);
+        client.subscribe('ping', data => {
+            expect(data.ping).toBe('pong');
+            subscription.unsubscribe();
+            expect(subscription.closed).toBe(true);
+            resolve();
+        }).then(s => {
+            subscription = s;
+        });
     });
 });
 
