@@ -33,7 +33,7 @@ module.exports = class Client extends EventEmitter {
         super();
 
         opts = opts || {};
-        ['tokenURL', 'clientID', 'clientSecret'].forEach((field) => {
+        ['clientID', 'clientSecret'].forEach((field) => {
             if (!(field in opts) || typeof opts[field] !== 'string') {
                 throw Error(`Required property '${field}' is either not set or not a string value`);
             }
