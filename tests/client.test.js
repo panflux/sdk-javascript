@@ -31,7 +31,7 @@ test('Client instantiation', async () => {
     return client.query('me { id, name }');
 });
 
-test('Bad config', () => {
+test('Missing required properties', () => {
     expect(() => Client.init()).toThrow('Required property');
     expect(() => Client.init({tokenURL: 'https://example.org/'})).toThrow('Required property');
 });
@@ -65,6 +65,18 @@ test('Subscription', async () => {
             resolve();
         }).then(s => {
             subscription = s;
+        });
+    });
+});
+
+test('Invalid subscription', async () => {
+    return new Promise((resolve, reject) => {
+        const client = Client.init(testConfig);
+        client.on('error', err => {
+            resolve('Call failed correctly: ' + err.message);
+        });
+        client.subscribe('pong', data => {
+            reject('Call did not fail');
         });
     });
 });
