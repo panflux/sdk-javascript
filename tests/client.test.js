@@ -21,7 +21,9 @@ test('Client instantiation', async () => {
     expect(onNewToken).toBeCalledWith(token);
     expect(client.token).toBe(token);
 
-    return client.query('me { id, name }');
+    return client.query('me { id, name }').then((response) => {
+        return expect(response.me.id).toMatch(/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/);
+    });
 });
 
 test('Missing required properties', () => {

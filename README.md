@@ -29,6 +29,12 @@ const client = Client.init({
     tokenURL: 'endpoint-if-not-default'
 })
 ```
+Do a simple query:
+```js
+client.query('me { id, name }').then((response) => {
+    console.info(`Authenticated as ${response.me.name}`);
+});
+```
 Subscribe to ping tests:
 ```js
 client.subscribe('ping',
