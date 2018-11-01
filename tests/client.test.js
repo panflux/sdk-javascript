@@ -6,15 +6,8 @@
  * file that was distributed with this source code.
  */
 
-require('dotenv').config();
-
 const {Client} = require('../index.js');
-
-const testConfig = {
-    tokenURL: process.env.TOKEN_URL,
-    clientID: process.env.CLIENT_ID,
-    clientSecret: process.env.CLIENT_SECRET,
-};
+const testConfig = require('./testConfig');
 
 test('Client instantiation', async () => {
     const onNewToken = jest.fn();
@@ -42,7 +35,7 @@ test('Invalid query', async () => {
     const client = Client.init(testConfig);
     client.on('error', onError);
 
-    return client.query('foo bar').catch(error => {
+    return client.query('foo bar').catch((error) => {
         expect(onError).toBeCalled();
         expect(error.message).toContain('Response not successful');
     });
@@ -55,15 +48,15 @@ test('Invalid credentials', async () => {
 });
 
 test('Subscription', async () => {
-    let client, subscription;
-    return new Promise(resolve => {
+    let client; let subscription;
+    return new Promise((resolve) => {
         client = Client.init(testConfig);
-        client.subscribe('ping', data => {
-            expect(data.ping).toBe('pong');
+        client.subscribe('ping', (response) => {
+            expect(response.ping).toMatch(/^2[0-9]{3}-[01][0-9]/);
             subscription.unsubscribe();
             expect(subscription.closed).toBe(true);
             resolve();
-        }).then(s => {
+        }).then((s) => {
             subscription = s;
         });
     });
@@ -72,10 +65,10 @@ test('Subscription', async () => {
 test('Invalid subscription', async () => {
     return new Promise((resolve, reject) => {
         const client = Client.init(testConfig);
-        client.on('error', err => {
+        client.on('error', (err) => {
             resolve('Call failed correctly: ' + err.message);
         });
-        client.subscribe('pong', data => {
+        client.subscribe('pong', (data) => {
             reject('Call did not fail');
         });
     });

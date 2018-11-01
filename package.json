@@ -7,9 +7,9 @@
     "license": "MIT",
     "main": "index.js",
     "scripts": {
-        "lint": "eslint --fix src",
-        "test": "eslint src && jest --detectOpenHandles --forceExit",
-        "test-insecure": "eslint src && NODE_TLS_REJECT_UNAUTHORIZED=0 jest --detectOpenHandles --forceExit"
+        "lint": "eslint --fix src tests",
+        "test": "eslint src tests && jest --detectOpenHandles --forceExit",
+        "test-insecure": "eslint src tests && NODE_TLS_REJECT_UNAUTHORIZED=0 jest --detectOpenHandles --forceExit"
     },
     "dependencies": {
         "apollo-link-context": "^1.0.9",
@@ -27,6 +27,7 @@
         "eslint": "5.8.0",
         "eslint-config-google": "0.11.0",
         "eslint-plugin-import": "2.14.0",
+        "eslint-plugin-jest": "^21.26.2",
         "jest": "23.6.0"
     },
     "jest": {

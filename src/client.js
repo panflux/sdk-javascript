@@ -141,19 +141,18 @@ module.exports = class Client extends EventEmitter {
      * Start a GraphQL subscription. Do not wrap the query in `subscription { ... }` markers.
      *
      * @param {string} query
-     * @param {function} cb Callback function to be called when events are returned.
-     * @return {Promise<object>} The raw query response
+     * @param {function} nextCallback
+     * @param {function?} errorCallback
+     * @param {function?} completeCallback
+     * @return {Promise<ZenObservable.Subscription>} Promise that resolves to the active subscription.
      */
-    async subscribe(query, cb) {
+    async subscribe(query, nextCallback, errorCallback, completeCallback) {
         return this.getLink()
             .then((link) => execute(link, {query: gql`subscription {${query}}`}).subscribe({
-                next: (response) => {
-                    if (response.data) {
-                        cb(response.data);
-                    }
-                },
-            }))
-        ;
+                next: (data) => nextCallback(data.data),
+                error: errorCallback,
+                complete: completeCallback,
+            }));
     }
 
     /**
