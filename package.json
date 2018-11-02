@@ -12,11 +12,11 @@
     "scripts": {
         "build": "rm -rf dist && mkdir dist && babel src -d dist --no-comments",
         "lint": "eslint --fix src tests",
-        "prepublishOnly": "yarn test-insecure && yarnn build",
+        "prepublishOnly": "yarn test-insecure && yarn build",
         "test": "eslint src tests && jest --detectOpenHandles --forceExit",
         "test-insecure": "eslint src tests && NODE_TLS_REJECT_UNAUTHORIZED=0 jest --detectOpenHandles --forceExit"
     },
-    "browserslist": "> 2.5%, not ie <= 11, not dead",
+    "browserslist": "> 1%, not dead",
     "dependencies": {
         "apollo-link-context": "^1.0.9",
         "apollo-link-error": "^1.1.1",
