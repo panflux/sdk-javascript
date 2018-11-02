@@ -5,14 +5,16 @@
         "plugin:jest/recommended"
     ],
     "plugins": [
-        "jest"
+        "jest",
+        "compat"
     ],
     "env": {
         "node": true,
         "es6": true
     },
     "parserOptions": {
-        "ecmaVersion": 2017
+        "ecmaVersion": 2017,
+        "sourceType": "module"
     },
     "rules": {
         "indent": ["error", 4],
@@ -25,6 +27,7 @@
             "ignoreRegExpLiterals": true
         }],
         "new-cap": 0,
-        "no-console": 1
+        "no-console": 1,
+        "compat/compat": 1
     }
 }

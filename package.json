@@ -5,12 +5,18 @@
     "repository": "github:panflux/sdk-javascript",
     "author": "Niels Keurentjes <niels.keurentjes@omines.com>",
     "license": "MIT",
-    "main": "index.js",
+    "main": "dist/index.js",
+    "files": [
+        "dist/*"
+    ],
     "scripts": {
+        "build": "rm -rf dist && mkdir dist && babel src -d dist --no-comments",
         "lint": "eslint --fix src tests",
+        "prepublishOnly": "yarn test-insecure && yarnn build",
         "test": "eslint src tests && jest --detectOpenHandles --forceExit",
         "test-insecure": "eslint src tests && NODE_TLS_REJECT_UNAUTHORIZED=0 jest --detectOpenHandles --forceExit"
     },
+    "browserslist": "> 2.5%, not ie <= 11, not dead",
     "dependencies": {
         "apollo-link-context": "^1.0.9",
         "apollo-link-error": "^1.1.1",
@@ -24,20 +30,26 @@
         "subscriptions-transport-ws": "^0.9.15"
     },
     "devDependencies": {
+        "@babel/cli": "^7.1.2",
+        "@babel/core": "^7.1.2",
+        "@babel/preset-env": "^7.1.0",
+        "@types/graphql": "14.0.0",
+        "@types/jest": "23.3.9",
+        "babel-core": "^7.0.0-bridge.0",
+        "babel-jest": "^23.6.0",
         "dotenv": "6.1.0",
         "eslint": "5.8.0",
         "eslint-config-google": "0.11.0",
+        "eslint-plugin-compat": "^2.6.3",
         "eslint-plugin-import": "2.14.0",
         "eslint-plugin-jest": "21.26.2",
-        "jest": "23.6.0"
+        "jest": "23.6.0",
+        "uglify-js": "^3.4.9"
     },
     "jest": {
         "collectCoverage": true,
         "collectCoverageFrom": [
             "src/**/*.js"
         ]
-    },
-    "files": [
-        "src/*"
-    ]
+    }
 }

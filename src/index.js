@@ -7,5 +7,5 @@
  */
 
 module.exports = {
-    Client: require('./src/client.js'),
+    Client: require('./client.js'),
 };

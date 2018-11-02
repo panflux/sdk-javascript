@@ -6,7 +6,7 @@
  * file that was distributed with this source code.
  */
 
-const {Client} = require('../index.js');
+const {Client} = require('../src/index.js');
 
 jest.mock('cross-fetch');
 const {fetch} = require('cross-fetch');
