@@ -13,6 +13,7 @@ const {HttpLink} = require('apollo-link-http');
 const {WebSocketLink} = require('apollo-link-ws');
 
 const EventEmitter = require('eventemitter3');
+const WebSocket = require('isomorphic-ws');
 const fetch = require('cross-fetch');
 const gql = require('graphql-tag');
 
@@ -79,6 +80,10 @@ module.exports = class Client extends EventEmitter {
                 return response.json();
             })
             .then((token) => {
+                if (!token.edges || token.edges.length < 1) {
+                    throw Error('Returned token must reference edges to be used in API');
+                }
+
                 this._token = token;
                 this.emit('newToken', token);
                 return token;
@@ -94,7 +99,7 @@ module.exports = class Client extends EventEmitter {
     async connect() {
         return (this._token ? Promise.resolve(this._token) : this.authenticate())
             .then((token) => {
-                const uri = (token.edges[0] || '') + '/graphql';
+                const uri = (token.edges[0]) + '/graphql';
                 return ApolloLink.from([
                     onError((params) => {
                         this.emit('error', params);
@@ -116,7 +121,7 @@ module.exports = class Client extends EventEmitter {
                         connectionParams: {
                             authToken: token.access_token,
                         },
-                    }, webSocketImpl: require('ws')}),
+                    }, webSocketImpl: WebSocket}),
                     new HttpLink({uri, fetch}),
                     ),
                 ]);
