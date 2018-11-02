@@ -1,6 +1,6 @@
 {
     "name": "@panflux/sdk",
-    "version": "0.2.1",
+    "version": "0.3.0",
     "description": "Software Development Kit for Panflux API consumers",
     "repository": "github:panflux/sdk-javascript",
     "author": "Niels Keurentjes <niels.keurentjes@omines.com>",
