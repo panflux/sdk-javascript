@@ -6,16 +6,16 @@
  * file that was distributed with this source code.
  */
 
-const {ApolloLink, execute, makePromise, split} = require('apollo-link');
-const {setContext} = require('apollo-link-context');
-const {onError} = require('apollo-link-error');
-const {HttpLink} = require('apollo-link-http');
-const {WebSocketLink} = require('apollo-link-ws');
+import {ApolloLink, execute, makePromise, split} from 'apollo-link';
+import {setContext} from 'apollo-link-context';
+import {onError} from 'apollo-link-error';
+import {HttpLink} from 'apollo-link-http';
+import {WebSocketLink} from 'apollo-link-ws';
 
-const EventEmitter = require('eventemitter3');
-const WebSocket = require('isomorphic-ws');
-const fetch = require('cross-fetch');
-const gql = require('graphql-tag');
+import EventEmitter from 'eventemitter3';
+import WebSocket from 'isomorphic-ws';
+import fetch from 'cross-fetch';
+import gql from 'graphql-tag';
 
 const DEFAULT_SCOPE = 'api:read';
 const DEFAULT_TOKEN_URL = 'https://panflux.app/oauth/v2/token';
@@ -23,7 +23,7 @@ const DEFAULT_TOKEN_URL = 'https://panflux.app/oauth/v2/token';
 /**
  * The Client class is the main encapsulation of a Panflux API client.
  */
-module.exports = class Client extends EventEmitter {
+class Client extends EventEmitter {
     /**
      * Client constructor.
      *
@@ -177,4 +177,6 @@ module.exports = class Client extends EventEmitter {
     get token() {
         return this._token;
     }
-};
+}
+
+export default Client;

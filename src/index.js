@@ -6,6 +6,6 @@
  * file that was distributed with this source code.
  */
 
-module.exports = {
-    Client: require('./client.js'),
-};
+import Client from './client';
+
+export {Client};

@@ -6,15 +6,13 @@
  * file that was distributed with this source code.
  */
 
-const {Client} = require('../src/index.js');
+import {Client} from '../src/index';
 
 jest.mock('cross-fetch');
 const {fetch} = require('cross-fetch');
 const {Response} = jest.requireActual('cross-fetch');
 
-afterEach(() => {
-    fetch.mockClear();
-});
+afterEach(() => fetch.mockClear());
 
 const testConfig = {
     clientID: 'foo',

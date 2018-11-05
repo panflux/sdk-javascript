@@ -6,7 +6,8 @@
  * file that was distributed with this source code.
  */
 
-const {Client} = require('../src/index.js');
+import {Client} from '../src/index';
+
 const testConfig = require('./testConfig');
 
 test('Client instantiation', async () => {

@@ -6,25 +6,36 @@
     "author": "Niels Keurentjes <niels.keurentjes@omines.com>",
     "license": "MIT",
     "main": "dist/index.js",
+    "module": "dist/index.es.js",
     "files": [
-        "dist/*"
+        "dist",
+        "lib"
     ],
     "scripts": {
-        "build": "rm -rf dist && mkdir dist && babel src -d dist --no-comments",
+        "clean": "rm -rf dist lib",
+        "build": "run-s clean && run-p build:es build:cjs build:lib:es",
+        "build:es": "NODE_ENV=es rollup -c",
+        "build:cjs": "NODE_ENV=cjs rollup -c",
+        "build:lib:es": "BABEL_ENV=es babel src -d lib",
         "lint": "eslint --fix src tests",
-        "prepublishOnly": "yarn test-insecure && yarn build",
-        "test": "eslint src tests && jest --detectOpenHandles --forceExit",
-        "test-insecure": "eslint src tests && NODE_TLS_REJECT_UNAUTHORIZED=0 jest --detectOpenHandles --forceExit"
+        "precommit": "lint-staged",
+        "prepublishOnly": "run-p build test-insecure lint",
+        "test": "jest --detectOpenHandles --forceExit",
+        "test-insecure": "NODE_TLS_REJECT_UNAUTHORIZED=0 run-s test"
     },
-    "browserslist": "> 1%, not dead",
+    "lint-staged": {
+        "*.js": [
+            "eslint"
+        ]
+    },
     "dependencies": {
         "apollo-link-context": "^1.0.9",
         "apollo-link-error": "^1.1.1",
         "apollo-link-http": "^1.5.5",
         "apollo-link-ws": "^1.0.9",
-        "cross-fetch": "^2.2.2",
+        "cross-fetch": "^2.2.3",
         "eventemitter3": "^3.1.0",
-        "graphql": "^14.0.2",
+        "graphql": "^0.11.3 || ^0.12.3 || ^0.13.0 || ^14.0.0",
         "graphql-tag": "^2.10.0",
         "isomorphic-ws": "^4.0.1",
         "subscriptions-transport-ws": "^0.9.15"
@@ -32,10 +43,12 @@
     "devDependencies": {
         "@babel/cli": "7.1.2",
         "@babel/core": "7.1.2",
+        "@babel/plugin-external-helpers": "^7.0.0",
         "@babel/preset-env": "7.1.0",
         "@types/graphql": "14.0.3",
         "@types/jest": "23.3.9",
         "babel-core": "7.0.0-bridge.0",
+        "babel-eslint": "^10.0.1",
         "babel-jest": "23.6.0",
         "dotenv": "6.1.0",
         "eslint": "5.8.0",
@@ -43,8 +56,13 @@
         "eslint-plugin-compat": "2.6.3",
         "eslint-plugin-import": "2.14.0",
         "eslint-plugin-jest": "21.27.1",
+        "husky": "^1.1.3",
         "jest": "23.6.0",
-        "uglify-js": "3.4.9"
+        "lint-staged": "^8.0.4",
+        "npm-run-all": "^4.1.3",
+        "rollup": "^0.67.0",
+        "rollup-plugin-babel": "^4.0.3",
+        "rollup-plugin-filesize": "^5.0.1"
     },
     "jest": {
         "collectCoverage": true,
