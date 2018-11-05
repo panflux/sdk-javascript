@@ -22,11 +22,11 @@
           "@babel/preset-env",
           {
             "targets": {
-              "browsers": [">1%", "not dead"]
+              "browsers": [">3%", "not dead"]
             },
             "loose": false,
             "modules": false,
-            "useBuiltIns": false
+            "useBuiltIns": "entry"
           }
         ]
       ]
