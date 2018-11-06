@@ -143,6 +143,19 @@ class Client extends EventEmitter {
     }
 
     /**
+     * Execute a GraphQL mutation. Do not wrap the query in `mutation { ... }` markers.
+     *
+     * @param {string} query
+     * @return {Promise<object>} The raw query response
+     */
+    async mutate(query) {
+        return this.getLink()
+            .then((link) => makePromise(execute(link, {query: gql`mutation {${query}}`})))
+            .then((response) => response.data)
+        ;
+    }
+
+    /**
      * Start a GraphQL subscription. Do not wrap the query in `subscription { ... }` markers.
      *
      * @param {string} query

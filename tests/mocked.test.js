@@ -49,3 +49,22 @@ test('Lazy link reuse', async () => {
     expect(client.getLink()).toEqual(client.getLink());
     expect(client.connect).toHaveBeenCalledTimes(1);
 });
+
+test('Fake mutation', async () => {
+    const client = Client.init(testConfig);
+    fetch
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+            edges: ['https://fake.edge.com/'],
+            access_token: 'foo',
+        })))
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+            data: {resetUnseenNotifications: true},
+        })))
+    ;
+
+    await client.authenticate();
+    return client.mutate('resetUnseenNotifications').then((r) => {
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(r.resetUnseenNotifications).toBe(true);
+    });
+});
