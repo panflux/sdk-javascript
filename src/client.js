@@ -170,7 +170,8 @@ class Client extends EventEmitter {
                     if (data.data) {
                         nextCallback(data.data);
                     } else if (data.errors) {
-                        errorCallback(data.errors[0]);
+                        // Only forward the first error, use error event for the rest if needed
+                        if (errorCallback) errorCallback(data.errors[0]);
                     } else {
                         /* istanbul ignore next */
                         throw Error('Could not parse subscription response message');
