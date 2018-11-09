@@ -42,6 +42,20 @@ test('Invalid token handling', async () => {
     expect(client.authenticate()).rejects.toThrow();
 });
 
+test('Scope joining and retrieval', async () => {
+    fetch
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+            edges: ['https://fake.edge.com/'],
+            access_token: 'foo',
+        })));
+
+    await Client.init(Object.assign({}, testConfig, {
+        scope: ['foo', 'bar', 'baz'],
+    })).authenticate();
+
+    expect(JSON.parse(fetch.mock.calls[0][1].body).scope).toBe('foo bar baz');
+});
+
 test('Lazy link reuse', async () => {
     const client = Client.init(testConfig);
     client.connect = jest.fn().mockResolvedValue('foo');

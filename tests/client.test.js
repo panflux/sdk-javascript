@@ -27,11 +27,6 @@ test('Client instantiation', async () => {
     });
 });
 
-test('Missing required properties', () => {
-    expect(() => Client.init()).toThrow('Required property');
-    expect(() => Client.init({tokenURL: 'https://example.org/'})).toThrow('Required property');
-});
-
 test('Invalid query', async () => {
     const onError = jest.fn();
 

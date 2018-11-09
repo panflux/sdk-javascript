@@ -17,7 +17,6 @@ import WebSocket from 'isomorphic-ws';
 import fetch from 'cross-fetch';
 import gql from 'graphql-tag';
 
-const DEFAULT_SCOPE = 'api:read';
 const DEFAULT_TOKEN_URL = 'https://panflux.app/oauth/v2/token';
 
 /**
@@ -34,13 +33,11 @@ class Client extends EventEmitter {
         super();
 
         opts = opts || {};
-        ['clientID', 'clientSecret'].forEach((field) => {
-            if (!(field in opts) || typeof opts[field] !== 'string') {
-                throw Error(`Required property '${field}' is either not set or not a string value`);
-            }
-        });
-
+        if (opts.scope && Array.isArray(opts.scope)) {
+            opts.scope = opts.scope.join(' ');
+        }
         this._opts = opts;
+
         if (token) {
             this._token = Promise.resolve(token);
         }
@@ -58,6 +55,8 @@ class Client extends EventEmitter {
     }
 
     /**
+     * Authenticate using client credentials.
+     *
      * @return {Promise<object>}
      */
     async authenticate() {
@@ -67,7 +66,7 @@ class Client extends EventEmitter {
                 grant_type: 'client_credentials',
                 client_id: this._opts.clientID,
                 client_secret: this._opts.clientSecret,
-                scope: this._opts.scope || DEFAULT_SCOPE,
+                scope: this._opts.scope || '',
             }),
             headers: {
                 'Content-Type': 'application/json',
