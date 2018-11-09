@@ -19,7 +19,7 @@ test('Client instantiation', async () => {
     const token = await client.authenticate();
 
     expect(client).toBeInstanceOf(Client);
-    expect(onNewToken).toBeCalledWith(token);
+    expect(onNewToken).toHaveBeenCalledWith(token);
     expect(client.token).toBe(token);
 
     return client.query('me { id, name }').then((response) => {
@@ -34,7 +34,7 @@ test('Invalid query', async () => {
     client.on('error', onError);
 
     return client.query('foo bar').catch((error) => {
-        expect(onError).toBeCalled();
+        expect(onError).toHaveBeenCalled();
         expect(error.message).toContain('Response not successful');
     });
 });
@@ -61,15 +61,18 @@ test('Subscription', async () => {
 });
 
 test('Invalid subscription', async () => {
-    return new Promise((resolve, reject) => {
-        const client = Client.init(testConfig);
-        client.on('error', (err) => {
-            resolve('Call failed correctly: ' + err.message);
-        });
-        client.subscribe('pong', (data) => {
-            reject('Call did not fail');
-        });
-    });
+    const client = Client.init(testConfig);
+    return Promise.all([
+        new Promise((resolve) => {
+            client.on('error', (err) => resolve('Call failed correctly: ' + err.message));
+        }),
+        new Promise((resolve, reject) => {
+            client.subscribe('nonexistentSubscription',
+                (data) => reject('Data callback should not be invoked'),
+                (err) => resolve('Error callback was invoked correctly'),
+            );
+        }),
+    ]);
 });
 
 test('Token reuse', async () => {

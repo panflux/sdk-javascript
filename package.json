@@ -67,7 +67,14 @@
     "collectCoverage": true,
     "collectCoverageFrom": [
       "src/**/*.js"
-    ]
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 90,
+        "lines": 97,
+        "statements": -3
+      }
+    }
   },
   "husky": {
     "hooks": {

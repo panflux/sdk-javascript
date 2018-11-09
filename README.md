@@ -48,3 +48,7 @@ client.subscribe('ping',
     setTimeout(() => subscription.unsubscribe(), 5000);
 });
 ```
+
+### License
+
+MIT, see the included LICENSE file.

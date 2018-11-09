@@ -166,7 +166,16 @@ class Client extends EventEmitter {
     async subscribe(query, nextCallback, errorCallback, completeCallback) {
         return this.getLink()
             .then((link) => execute(link, {query: gql`subscription {${query}}`}).subscribe({
-                next: (data) => nextCallback(data.data),
+                next: (data) => {
+                    if (data.data) {
+                        nextCallback(data.data);
+                    } else if (data.errors) {
+                        errorCallback(data.errors[0]);
+                    } else {
+                        /* istanbul ignore next */
+                        throw Error('Could not parse subscription response message');
+                    }
+                },
                 error: errorCallback,
                 complete: completeCallback,
             }));
