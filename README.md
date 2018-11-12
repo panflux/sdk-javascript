@@ -34,19 +34,28 @@ const client = Client.init({
 ```
 Do a simple query:
 ```js
-client.query('me { id, name }').then((response) => {
-    console.info(`Authenticated as ${response.me.name}`);
-});
+client.query('query { me { id, name } }')
+    .then((response) => {
+        console.info(`Authenticated as ${response.me.name}`);
+    });
+```
+Or with variables:
+```js
+client.query('query Self($id: UUID!) { me(id: $id) { id, name } }')
+    .then((response) => {
+        console.info(`Authenticated as ${response.me.name}`);
+    });
 ```
 Subscribe to ping tests:
 ```js
-client.subscribe('ping',
+client.subscribe('subscription { ping }',
     data => console.info(data),
     err => console.error(err),
     () => console.info('Subscription closed'),
-}).then(subscription => {
-    setTimeout(() => subscription.unsubscribe(), 5000);
-});
+})
+    .then(subscription => {
+        setTimeout(() => subscription.unsubscribe(), 5000);
+    });
 ```
 
 ### License
