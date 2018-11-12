@@ -60,6 +60,9 @@ class Client extends EventEmitter {
      * @return {Promise<object>}
      */
     async authenticate() {
+        if (!this._opts.clientID || !this._opts.clientSecret) {
+            throw Error('ClientID and ClientSecret options are required to use OAuth2 client credentials grant');
+        }
         return fetch(this._opts.tokenURL || DEFAULT_TOKEN_URL, {
             method: 'POST',
             body: JSON.stringify({
@@ -132,24 +135,13 @@ class Client extends EventEmitter {
      * Execute a GraphQL query. Do not wrap the query in `query { ... }` markers.
      *
      * @param {string} query
+     * @param {object?} variables Optional variables
      * @return {Promise<object>} The raw query response
      */
-    async query(query) {
+    async query(query, variables) {
         return this.getLink()
-            .then((link) => makePromise(execute(link, {query: gql`query {${query}}`})))
-            .then((response) => response.data)
-        ;
-    }
-
-    /**
-     * Execute a GraphQL mutation. Do not wrap the query in `mutation { ... }` markers.
-     *
-     * @param {string} query
-     * @return {Promise<object>} The raw query response
-     */
-    async mutate(query) {
-        return this.getLink()
-            .then((link) => makePromise(execute(link, {query: gql`mutation {${query}}`})))
+            .then((link) => makePromise(execute(link, {query: gql(query), variables}
+            )))
             .then((response) => response.data)
         ;
     }
@@ -165,7 +157,7 @@ class Client extends EventEmitter {
      */
     async subscribe(query, nextCallback, errorCallback, completeCallback) {
         return this.getLink()
-            .then((link) => execute(link, {query: gql`subscription {${query}}`}).subscribe({
+            .then((link) => execute(link, {query: gql(query)}).subscribe({
                 next: (data) => {
                     if (data.data) {
                         nextCallback(data.data);

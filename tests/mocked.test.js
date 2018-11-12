@@ -77,7 +77,7 @@ test('Fake mutation', async () => {
     ;
 
     await client.authenticate();
-    return client.mutate('resetUnseenNotifications').then((r) => {
+    return client.query('mutation { resetUnseenNotifications }').then((r) => {
         expect(fetch).toHaveBeenCalledTimes(2);
         expect(r.resetUnseenNotifications).toBe(true);
     });

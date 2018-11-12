@@ -22,9 +22,19 @@ test('Client instantiation', async () => {
     expect(onNewToken).toHaveBeenCalledWith(token);
     expect(client.token).toBe(token);
 
-    return client.query('me { id, name }').then((response) => {
-        return expect(response.me.id).toMatch(/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/);
+    return client.query('query Me { me { id, name } }').then((response) => {
+        expect(response.me.id).toMatch(/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/);
+
+        // Double check for parametrized queries
+        return client.query('query UserMe($id: UUID!) { user(id: $id) { id, name } }', {id: response.me.id}).then((nestedResponse) => {
+            expect(nestedResponse.user.id).toBe(response.me.id);
+        });
     });
+});
+
+test('Empty configuration', async () => {
+    const client = Client.init();
+    expect(client.authenticate()).rejects.toThrow('ClientID and ClientSecret options are required');
 });
 
 test('Invalid query', async () => {
@@ -33,7 +43,7 @@ test('Invalid query', async () => {
     const client = Client.init(testConfig);
     client.on('error', onError);
 
-    return client.query('foo bar').catch((error) => {
+    return client.query('query { foo bar }').catch((error) => {
         expect(onError).toHaveBeenCalled();
         expect(error.message).toContain('Response not successful');
     });
@@ -49,7 +59,7 @@ test('Subscription', async () => {
     let client; let subscription;
     return new Promise((resolve) => {
         client = Client.init(testConfig);
-        client.subscribe('ping', (response) => {
+        client.subscribe('subscription { ping }', (response) => {
             expect(response.ping).toMatch(/^2[0-9]{3}-[01][0-9]/);
             subscription.unsubscribe();
             expect(subscription.closed).toBe(true);
@@ -67,7 +77,7 @@ test('Invalid subscription', async () => {
             client.on('error', (err) => resolve('Call failed correctly: ' + err.message));
         }),
         new Promise((resolve, reject) => {
-            client.subscribe('nonexistentSubscription',
+            client.subscribe('subscription { nonexistentSubscription }',
                 (data) => reject('Data callback should not be invoked'),
                 (err) => resolve('Error callback was invoked correctly'),
             );
@@ -82,7 +92,7 @@ test('Token reuse', async () => {
     const onNewToken = jest.fn();
     client2.on('newToken', onNewToken);
 
-    await client2.query('me { id, name }');
+    await client2.query('query { me { id, name } }');
 
     expect(onNewToken).toHaveBeenCalledTimes(0);
 });
