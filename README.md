@@ -35,16 +35,17 @@ const client = Client.init({
 Do a simple query:
 ```js
 client.query('query { me { id, name } }')
-    .then((response) => {
-        console.info(`Authenticated as ${response.me.name}`);
+    .then(({me}) => {
+        console.info(`Authenticated as ${me.name}`);
     });
 ```
 Or with variables:
 ```js
-client.query('query Self($id: UUID!) { me(id: $id) { id, name } }')
-    .then((response) => {
-        console.info(`Authenticated as ${response.me.name}`);
-    });
+client.query('query result($id: UUID!) { user(id: $id) { id, name } }', {
+    'id' => 'your-user-id',    
+}).then(({result}) => {
+    console.info(`Authenticated as ${result.name}`);
+});
 ```
 Subscribe to ping tests:
 ```js

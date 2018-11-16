@@ -10,6 +10,7 @@ import {ApolloLink, execute, makePromise, split} from 'apollo-link';
 import {setContext} from 'apollo-link-context';
 import {onError} from 'apollo-link-error';
 import {HttpLink} from 'apollo-link-http';
+import {RetryLink} from 'apollo-link-retry';
 import {WebSocketLink} from 'apollo-link-ws';
 
 import EventEmitter from 'eventemitter3';
@@ -103,6 +104,7 @@ class Client extends EventEmitter {
             .then((token) => {
                 const uri = (token.edges[0]) + '/graphql';
                 return ApolloLink.from([
+                    new RetryLink(),
                     onError((params) => {
                         this.emit('error', params);
                     }),
@@ -140,8 +142,7 @@ class Client extends EventEmitter {
      */
     async query(query, variables) {
         return this.getLink()
-            .then((link) => makePromise(execute(link, {query: gql(query), variables}
-            )))
+            .then((link) => makePromise(execute(link, {query: gql(query), variables})))
             .then((response) => response.data)
         ;
     }
@@ -180,10 +181,12 @@ class Client extends EventEmitter {
      * @return {Promise<ApolloLink>}
      */
     async getLink() {
+        if (this._token && ((Date.now() / 1000) + 5000) > this._token.expire_time) {
+            this._token = this._apollo = null;
+        }
         if (!this._apollo) {
             this._apollo = this.connect();
         }
-        // TODO: Detect expired tokens
         return this._apollo;
     }
 

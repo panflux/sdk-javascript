@@ -18,6 +18,7 @@ export default {
         'apollo-link-context',
         'apollo-link-error',
         'apollo-link-http',
+        'apollo-link-retry',
         'apollo-link-ws',
         'eventemitter3',
         'isomorphic-ws',
