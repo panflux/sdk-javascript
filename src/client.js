@@ -120,6 +120,7 @@ class Client extends EventEmitter {
                                 kind === 'OperationDefinition' && operation === 'subscription',
                         ),
                     new WebSocketLink({uri: uri.replace(/^http/, 'ws'), options: {
+                        lazy: true,
                         reconnect: true,
                         reconnectionAttempts: 3,
                         connectionParams: {

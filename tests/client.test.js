@@ -38,15 +38,15 @@ test('Empty configuration', async () => {
 });
 
 test('Invalid query', async () => {
+    // This test may be slow on congested networks
+    jest.setTimeout(15000);
     const onError = jest.fn();
 
     const client = Client.init(testConfig);
     client.on('error', onError);
 
-    return client.query('query { foo bar }').catch((error) => {
-        expect(onError).toHaveBeenCalled();
-        expect(error.message).toContain('Response not successful');
-    });
+    await expect(client.query('query { foo bar }')).rejects.toThrow(Error);
+    expect(onError).toHaveBeenCalled();
 });
 
 test('Invalid credentials', async () => {
