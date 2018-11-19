@@ -104,7 +104,7 @@ class Client extends EventEmitter {
             .then((token) => {
                 const uri = (token.edges[0]) + '/graphql';
                 return ApolloLink.from([
-                    new RetryLink(),
+                    new RetryLink({attempts: {retryIf: (error) => (error.statusCode !== 400)}}),
                     onError((params) => {
                         this.emit('error', params);
                     }),
