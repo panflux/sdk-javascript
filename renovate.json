@@ -1,12 +1,10 @@
 {
   "extends": [
-    "config:base"
+    "config:js-lib",
+    "schedule:monthly"
   ],
   "patch": {
     "automerge": true,
     "automergeType": "branch"
-  },
-  "schedule": [
-    "every weekend"
-  ]
+  }
 }
