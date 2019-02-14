@@ -19,6 +19,7 @@ import fetch from 'cross-fetch';
 import gql from 'graphql-tag';
 
 const DEFAULT_TOKEN_URL = 'https://panflux.app/oauth/v2/token';
+const DEFAULT_AUTHORIZE_URL = 'https://panflux.app/oauth/v2/authorize';
 
 /**
  * The Client class is the main encapsulation of a Panflux API client.
@@ -53,6 +54,23 @@ class Client extends EventEmitter {
      */
     static init(opts, token) {
         return new Client(opts, token);
+    }
+
+    /**
+     * Login the user and retrieve an access token.
+     */
+    async loginFromBrowser() {
+        if (!this._opts.clientID) {
+            throw Error('ClientID options are required to use OAuth2 access_code grant');
+        }
+        const url = this._opts.authURL || DEFAULT_AUTHORIZE_URL;
+        const q = Object.entries({
+            response_type: 'code',
+            redirect_uri: location.href,
+            scope: this._opts.scope || '',
+            client_id: this._opts.clientID,
+        }).map(([key, val]) => `${encodeURIComponent(key)}=${encodeURIComponent(val)}`).join('&');
+        location.href = url + '?' + q;
     }
 
     /**
@@ -196,5 +214,6 @@ class Client extends EventEmitter {
         return this._token;
     }
 }
+
 
 export default Client;
