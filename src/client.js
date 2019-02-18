@@ -19,6 +19,7 @@ import fetch from 'cross-fetch';
 import gql from 'graphql-tag';
 
 const STATE_TOKEN = 'panflux_token';
+const CHANNEL_NAME = 'panflux_channel';
 
 const DEFAULT_TOKEN_URL = 'https://panflux.app/oauth/v2/token';
 const DEFAULT_AUTHORIZE_URL = 'https://panflux.app/oauth/v2/authorize';
@@ -80,10 +81,16 @@ class Client extends EventEmitter {
      */
     static init(opts, token) {
         const client = new Client(opts, token);
+        let c;
 
         // When a valid token is present return early
         if (null != client.token) {
             return client;
+        }
+
+        if (undefined !== window.BroadcastChannel) {
+            c = new BroadcastChannel(CHANNEL_NAME);
+            c.onmessage = client._onChannelMessage.bind(client);
         }
 
         // If we are running inside a browser check for a code query parameter.
@@ -97,14 +104,22 @@ class Client extends EventEmitter {
             if (undefined === o.code || undefined === o.state) {
                 return client;
             }
+            client._verifyAuthResponse(o.code, o.state);
+
             client._resolving = true;
-            client._verifyAuthResponse(o.code, o.state)
-                .then((token) => {
+            if (undefined !== window.BroadcastChannel) {
+                // send message to other tabs so application can pick up further authorization
+                c.postMessage(o.code);
+                window.close();
+            } else {
+                client.requestToken(o.code).then((token) => {
                     client._resolving = false;
                     client._token = Promise.resolve(token);
+
                     return client;
                 })
-                .catch((err) => console.error(err));
+                    .catch((err) => console.error(err));
+            }
         }
 
         return client;
@@ -139,7 +154,7 @@ class Client extends EventEmitter {
             },
         })
             .then(validateResponse)
-            .then(this._returnToken);
+            .then(this._returnToken.bind(this));
     }
 
     /**
@@ -302,7 +317,7 @@ class Client extends EventEmitter {
             window.localStorage.setItem(STATE_TOKEN, token);
         }
 
-        location.href = url + '?' + q;
+        window.open(url + '?' + q);
         return {};
     }
 
@@ -310,9 +325,11 @@ class Client extends EventEmitter {
      * @param {string} code
      * @param {string} state
      *
+     * @return {boolean}
+     *
      * @private
      */
-    async _verifyAuthResponse(code, state) {
+    _verifyAuthResponse(code, state) {
         if (undefined === window['localStorage']) {
             console.error('No localStorage is present. State validation cannot be performed.');
         } else {
@@ -322,8 +339,7 @@ class Client extends EventEmitter {
             }
         }
 
-        // Request an access code
-        return this.requestToken(code);
+        return true;
     }
 
     /**
@@ -351,6 +367,22 @@ class Client extends EventEmitter {
      */
     _isBrowser() {
         return window !== undefined && typeof window === 'object';
+    }
+
+    /**
+     * @param {object} ev
+     * @private
+     */
+    _onChannelMessage(ev) {
+        this._resolving = true;
+        this.requestToken(ev.data)
+            .then((token) => {
+                this._resolving = false;
+                this._token = Promise.resolve(token);
+
+                return this;
+            })
+            .catch((err) => console.error(err));
     }
 }
 
