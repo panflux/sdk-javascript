@@ -109,7 +109,10 @@ class Client extends EventEmitter {
             client._resolving = true;
             if (undefined !== window.BroadcastChannel) {
                 // send message to other tabs so application can pick up further authorization
-                c.postMessage(o.code);
+                c.postMessage({
+                    type: STATE_TOKEN,
+                    code: o.code,
+                });
                 window.close();
             } else {
                 client.requestToken(o.code).then((token) => {
@@ -374,15 +377,17 @@ class Client extends EventEmitter {
      * @private
      */
     _onChannelMessage(ev) {
-        this._resolving = true;
-        this.requestToken(ev.data)
-            .then((token) => {
-                this._resolving = false;
-                this._token = Promise.resolve(token);
+        if (undefined !== ev.data.type && ev.data.type === STATE_TOKEN) {
+            this._resolving = true;
+            this.requestToken(ev.data.code)
+                .then((token) => {
+                    this._resolving = false;
+                    this._token = Promise.resolve(token);
 
-                return this;
-            })
-            .catch((err) => console.error(err));
+                    return this;
+                })
+                .catch((err) => console.error(err));
+        }
     }
 }
 
