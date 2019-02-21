@@ -115,7 +115,7 @@ class Client extends EventEmitter {
                 });
                 window.close();
             } else {
-                client.requestToken(o.code).then((token) => {
+                client.requestToken(o.code, location.origin).then((token) => {
                     client._resolving = false;
                     client._token = Promise.resolve(token);
 
@@ -139,17 +139,18 @@ class Client extends EventEmitter {
 
     /**
      * @param {string} code
+     * @param {string} returnUrl
      *
      * @return {Promise<object>}
      */
-    async requestToken(code) {
+    async requestToken(code, returnUrl) {
         return fetch(this._opts.tokenURL || DEFAULT_TOKEN_URL, {
             method: 'POST',
             body: JSON.stringify({
                 grant_type: 'authorization_code',
                 client_id: this._opts.clientID,
                 client_secret: this._opts.clientSecret,
-                redirect_uri: location.origin, // TODO Find better way to provide return URI
+                redirect_uri: returnUrl, // TODO Find better way to provide return URI
                 code: code,
             }),
             headers: {
@@ -379,7 +380,7 @@ class Client extends EventEmitter {
     _onChannelMessage(ev) {
         if (undefined !== ev.data.type && ev.data.type === STATE_TOKEN) {
             this._resolving = true;
-            this.requestToken(ev.data.code)
+            this.requestToken(ev.data.code, location.origin)
                 .then((token) => {
                     this._resolving = false;
                     this._token = Promise.resolve(token);
