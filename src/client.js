@@ -17,35 +17,13 @@ import EventEmitter from 'eventemitter3';
 import WebSocket from 'isomorphic-ws';
 import fetch from 'cross-fetch';
 import gql from 'graphql-tag';
+import runtime from './runtime';
 
 const STATE_TOKEN = 'panflux_token';
 const CHANNEL_NAME = 'panflux_channel';
 
 const DEFAULT_TOKEN_URL = 'https://panflux.app/oauth/v2/token';
 const DEFAULT_AUTHORIZE_URL = 'https://panflux.app/oauth/v2/authorize';
-
-/**
- * @param {number} len
- * @return {string}
- */
-function generateCSRF(len) {
-    const arr = new Uint8Array((len || 40) / 2);
-    window.crypto.getRandomValues(arr);
-    return Array.from(arr, (dec) => ('0' + dec.toString(16)).substr(-2)).join('');
-}
-
-/**
- * This function should be chained to a fetch request Promise to process the response parameters
- *
- * @param {object} response
- * @return {*}
- */
-function validateResponse(response) {
-    if (response.status !== 200) {
-        throw Error(response.statusText);
-    }
-    return response.json();
-}
 
 /**
  * The Client class is the main encapsulation of a Panflux API client.
@@ -70,6 +48,7 @@ class Client extends EventEmitter {
             this._token = Promise.resolve(token);
         }
         this._resolving = false;
+        this._codeVerifier = null;
     }
 
     /**
@@ -144,20 +123,25 @@ class Client extends EventEmitter {
      * @return {Promise<object>}
      */
     async requestToken(code, returnUrl) {
+        const opts = {
+            grant_type: 'authorization_code',
+            client_id: this._opts.clientID,
+            redirect_uri: returnUrl,
+            code: code,
+        };
+        if (this._opts.client_secret) {
+            opts['client_secret'] = this._opts.client_secret;
+        } else {
+            opts['code_verifier'] = this._codeVerifier;
+        }
         return fetch(this._opts.tokenURL || DEFAULT_TOKEN_URL, {
             method: 'POST',
-            body: JSON.stringify({
-                grant_type: 'authorization_code',
-                client_id: this._opts.clientID,
-                client_secret: this._opts.clientSecret,
-                redirect_uri: returnUrl, // TODO Find better way to provide return URI
-                code: code,
-            }),
+            body: JSON.stringify(opts),
             headers: {
                 'Content-Type': 'application/json',
             },
         })
-            .then(validateResponse)
+            .then(runtime.validateResponse)
             .then(this._returnToken.bind(this));
     }
 
@@ -182,7 +166,7 @@ class Client extends EventEmitter {
                 'Content-Type': 'application/json',
             },
         })
-            .then(validateResponse)
+            .then(runtime.validateResponse)
             .then(this._returnToken);
     }
 
@@ -304,13 +288,16 @@ class Client extends EventEmitter {
         if (!this._opts.clientID) {
             throw Error('ClientID options are required to use OAuth2 access_code grant');
         }
+        this._codeVerifier = runtime.generateCodeVerifier();
         const url = this._opts.authURL || DEFAULT_AUTHORIZE_URL;
-        const token = generateCSRF(16);
+        const token = runtime.generateCSRF();
         const q = Object.entries({
             response_type: 'code',
             redirect_uri: location.origin,
             scope: this._opts.scope || '',
             client_id: this._opts.clientID,
+            code_challenge: runtime.generateCodeChallenge(this._codeVerifier),
+            code_challenge_method: 'S256',
             state: token,
         }).map(([key, val]) => `${encodeURIComponent(key)}=${encodeURIComponent(val)}`).join('&');
 
