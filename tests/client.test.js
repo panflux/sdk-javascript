@@ -78,7 +78,7 @@ test('Invalid subscription', async () => {
         }),
         new Promise((resolve, reject) => {
             client.subscribe('subscription { nonexistentSubscription }',
-                (data) => reject('Data callback should not be invoked'),
+                (data) => reject(new Error('Data callback should not be invoked')),
                 (err) => resolve('Error callback was invoked correctly'),
             );
         }),
