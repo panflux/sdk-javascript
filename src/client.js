@@ -21,9 +21,22 @@ import runtime from './runtime';
 
 const STATE_TOKEN = 'panflux_token';
 const CHANNEL_NAME = 'panflux_channel';
+const OAUTH_ERROR = 'panflux_oauth_error';
 
 const DEFAULT_TOKEN_URL = 'https://panflux.app/oauth/v2/token';
 const DEFAULT_AUTHORIZE_URL = 'https://panflux.app/oauth/v2/authorize';
+
+const defaultOpts = {
+    authURL: DEFAULT_AUTHORIZE_URL,
+    tokenURL: DEFAULT_TOKEN_URL,
+    state: '',
+    sameWindow: false,
+};
+
+let channel;
+if (undefined !== window.BroadcastChannel) {
+    channel = new BroadcastChannel(CHANNEL_NAME);
+}
 
 /**
  * The Client class is the main encapsulation of a Panflux API client.
@@ -42,7 +55,7 @@ class Client extends EventEmitter {
         if (opts.scope && Array.isArray(opts.scope)) {
             opts.scope = opts.scope.join(' ');
         }
-        this._opts = opts;
+        this._opts = Object.assign(defaultOpts, opts);
 
         if (token) {
             this._token = Promise.resolve(token);
@@ -60,48 +73,14 @@ class Client extends EventEmitter {
      */
     static init(opts, token) {
         const client = new Client(opts, token);
-        let c;
 
         // When a valid token is present return early
         if (null != client.token) {
             return client;
         }
 
-        if (undefined !== window.BroadcastChannel) {
-            c = new BroadcastChannel(CHANNEL_NAME);
-            c.onmessage = client._onChannelMessage.bind(client);
-        }
-
-        // If we are running inside a browser check for a code query parameter.
-        if (client._isBrowser()) {
-            const q = location.search.substring(1);
-            const o = {};
-            q.replace(/([^=&]+)=([^&]*)/g, (m, key, value) => {
-                o[decodeURIComponent(key)] = decodeURIComponent(value);
-            });
-            // we only accept requests with a code and a state
-            if (undefined === o.code || undefined === o.state) {
-                return client;
-            }
-            client._verifyAuthResponse(o.code, o.state);
-
-            client._resolving = true;
-            if (undefined !== window.BroadcastChannel) {
-                // send message to other tabs so application can pick up further authorization
-                c.postMessage({
-                    type: STATE_TOKEN,
-                    code: o.code,
-                });
-                window.close();
-            } else {
-                client.requestToken(o.code, location.origin).then((token) => {
-                    client._resolving = false;
-                    client._token = Promise.resolve(token);
-
-                    return client;
-                })
-                    .catch((err) => console.error(err));
-            }
+        if (undefined !== channel) {
+            channel.onmessage = client._onChannelMessage.bind(client);
         }
 
         return client;
@@ -114,6 +93,7 @@ class Client extends EventEmitter {
         if (this._isBrowser()) {
             return Promise.resolve(this._loginFromBrowser());
         }
+        throw new Error('The Panflux SDK has no way to determine the platform you\'re using');
     }
 
     /**
@@ -132,9 +112,12 @@ class Client extends EventEmitter {
         if (this._opts.client_secret) {
             opts['client_secret'] = this._opts.client_secret;
         } else {
+            if (this._opts.sameWindow && window.localStorage) {
+                this._codeVerifier = window.localStorage.getItem('verifier');
+            }
             opts['code_verifier'] = this._codeVerifier;
         }
-        return fetch(this._opts.tokenURL || DEFAULT_TOKEN_URL, {
+        return fetch(this._opts.tokenURL, {
             method: 'POST',
             body: JSON.stringify(opts),
             headers: {
@@ -154,7 +137,7 @@ class Client extends EventEmitter {
         if (!this._opts.clientID || !this._opts.clientSecret) {
             throw Error('ClientID and ClientSecret options are required to use OAuth2 client credentials grant');
         }
-        return fetch(this._opts.tokenURL || DEFAULT_TOKEN_URL, {
+        return fetch(this._opts.tokenURL, {
             method: 'POST',
             body: JSON.stringify({
                 grant_type: 'client_credentials',
@@ -278,6 +261,85 @@ class Client extends EventEmitter {
     }
 
     /**
+     * This function will handle an incoming request with query params
+     *
+     * @param {string} query
+     * @param {string} returnUrl
+     *
+     * @return {Client}
+     */
+    handleBrowserResult(query, returnUrl) {
+        const o = {};
+        query.replace(/([^=&]+)=([^&]*)/g, (m, key, value) => {
+            o[decodeURIComponent(key)] = decodeURIComponent(value);
+        });
+        // check for any incoming errors
+        if (o.state && o.error) {
+            return this._handleCodeError(o);
+        }
+        // we only accept requests with a code and a state
+        if (undefined === o.code || undefined === o.state) {
+            return this;
+        }
+        this._verifyAuthResponse(o.code, o.state);
+
+        this._resolving = true;
+        this._handleCodeSuccess(o.code, returnUrl);
+
+        return this;
+    }
+
+    /**
+     * This function will publish an error to the broadcast channel or stop executing code
+     * by raising an error.
+     *
+     * @param {Object} params
+     */
+    _handleCodeError(params) {
+        if (undefined !== channel) {
+            // send message to other tabs so application can pick up further authorization
+            channel.postMessage(Object.assign({
+                type: OAUTH_ERROR,
+            }, params));
+            if (!this._opts.sameWindow) {
+                window.close();
+            }
+            return;
+        }
+        const msg = params.error + ': ' + params.error_description;
+        throw new Error(msg);
+    }
+
+    /**
+     * Handle code success will publish the received code to the broadcast channel
+     * if it is available or request a token if no broadcast channel can be used.
+     *
+     * @param {string} code
+     * @param {string} returnUrl
+     */
+    _handleCodeSuccess(code, returnUrl) {
+        if (undefined !== channel) {
+            // send message to other tabs so application can pick up further authorization
+            channel.postMessage({
+                type: STATE_TOKEN,
+                code: code,
+            });
+        }
+        if (!this._opts.sameWindow) {
+            window.close();
+        } else {
+            this.requestToken(code, returnUrl)
+                .then((token) => {
+                    this._resolving = false;
+                    this._token = Promise.resolve(token);
+
+                    return this;
+                })
+                .catch((err) => console.error(err));
+        }
+    }
+
+    /**
      * Login the user and retrieve an access request code.
      *
      * @private
@@ -289,12 +351,17 @@ class Client extends EventEmitter {
             throw Error('ClientID options are required to use OAuth2 access_code grant');
         }
         this._codeVerifier = runtime.generateCodeVerifier();
+        if (this._opts.sameWindow && window.localStorage) {
+            window.localStorage.setItem('verifier', this._codeVerifier);
+        } else if (this._opts.sameWindow && !window.localStorage) {
+            throw new Error('No localStorage present, you cannot use sameWindow option');
+        }
         const url = this._opts.authURL || DEFAULT_AUTHORIZE_URL;
         const token = runtime.generateCSRF();
         const q = Object.entries({
             response_type: 'code',
             redirect_uri: location.origin,
-            scope: this._opts.scope || '',
+            scope: this._opts.scope,
             client_id: this._opts.clientID,
             code_challenge: runtime.generateCodeChallenge(this._codeVerifier),
             code_challenge_method: 'S256',
@@ -308,7 +375,11 @@ class Client extends EventEmitter {
             window.localStorage.setItem(STATE_TOKEN, token);
         }
 
-        window.open(url + '?' + q);
+        if (this._opts.sameWindow) {
+            location.href = url + '?' + q;
+        } else {
+            window.open(url + '?' + q);
+        }
         return {};
     }
 
@@ -347,6 +418,7 @@ class Client extends EventEmitter {
         }
 
         this._token = token;
+        // if an token function was provided let that handle the error.
         this.emit('newToken', token);
         return token;
     }
@@ -365,7 +437,11 @@ class Client extends EventEmitter {
      * @private
      */
     _onChannelMessage(ev) {
-        if (undefined !== ev.data.type && ev.data.type === STATE_TOKEN) {
+        if (undefined === ev.data.type) {
+            return;
+        }
+        switch (ev.data.type) {
+        case STATE_TOKEN:
             this._resolving = true;
             this.requestToken(ev.data.code, location.origin)
                 .then((token) => {
@@ -375,6 +451,10 @@ class Client extends EventEmitter {
                     return this;
                 })
                 .catch((err) => console.error(err));
+            break;
+        case OAUTH_ERROR:
+            this.emit('oauthError', ev.data);
+            break;
         }
     }
 }
