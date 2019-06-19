@@ -34,7 +34,7 @@ const defaultOpts = {
 };
 
 let channel;
-if (undefined !== window.BroadcastChannel) {
+if (typeof module === 'undefined' && undefined !== window && undefined !== window.BroadcastChannel) {
     channel = new BroadcastChannel(CHANNEL_NAME);
 }
 
@@ -92,6 +92,8 @@ class Client extends EventEmitter {
     async login() {
         if (this._isBrowser()) {
             return Promise.resolve(this._loginFromBrowser());
+        } else if (this._isNodeJS()) {
+            return Promise.resolve(this.authenticate());
         }
         throw new Error('The Panflux SDK has no way to determine the platform you\'re using');
     }
@@ -150,7 +152,7 @@ class Client extends EventEmitter {
             },
         })
             .then(runtime.validateResponse)
-            .then(this._returnToken);
+            .then(this._returnToken.bind(this));
     }
 
     /**
@@ -429,7 +431,15 @@ class Client extends EventEmitter {
      * @private
      */
     _isBrowser() {
-        return window !== undefined && typeof window === 'object';
+        return typeof module === 'undefined' && window !== undefined && typeof window === 'object';
+    }
+
+    /**
+     * @return {boolean}
+     * @private
+     */
+    _isNodeJS() {
+        return typeof module !== 'undefined' && module.exports;
     }
 
     /**
