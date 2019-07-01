@@ -45,7 +45,7 @@
     "@babel/core": "7.4.5",
     "@babel/plugin-external-helpers": "7.2.0",
     "@babel/preset-env": "7.4.5",
-    "@types/graphql": "14.2.0",
+    "@types/graphql": "14.2.2",
     "@types/jest": "24.0.13",
     "babel-core": "7.0.0-bridge.0",
     "babel-eslint": "10.0.1",
