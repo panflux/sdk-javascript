@@ -41,10 +41,10 @@
     "subscriptions-transport-ws": "^0.9.15"
   },
   "devDependencies": {
-    "@babel/cli": "7.5.0",
-    "@babel/core": "7.5.0",
+    "@babel/cli": "7.5.5",
+    "@babel/core": "7.5.5",
     "@babel/plugin-external-helpers": "7.2.0",
-    "@babel/preset-env": "7.5.0",
+    "@babel/preset-env": "7.5.5",
     "@types/graphql": "14.2.2",
     "@types/jest": "24.0.15",
     "babel-core": "7.0.0-bridge.0",
