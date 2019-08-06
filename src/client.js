@@ -33,8 +33,24 @@ const defaultOpts = {
     sameWindow: false,
 };
 
+/**
+ * This function wil test if an `window` global is available
+ *
+ * @return {bool}
+ */
+function hasWindowObject() {
+    try {
+        if (typeof window === 'object') {
+            return true;
+        }
+        return false;
+    } catch (e) {
+        return false;
+    }
+}
+
 let channel;
-if (typeof module === 'undefined' && undefined !== window && undefined !== window.BroadcastChannel) {
+if (hasWindowObject() && undefined !== window.BroadcastChannel) {
     channel = new BroadcastChannel(CHANNEL_NAME);
 }
 
@@ -431,7 +447,7 @@ class Client extends EventEmitter {
      * @private
      */
     _isBrowser() {
-        return typeof module === 'undefined' && window !== undefined && typeof window === 'object';
+        return hasWindowObject();
     }
 
     /**
@@ -439,7 +455,7 @@ class Client extends EventEmitter {
      * @private
      */
     _isNodeJS() {
-        return typeof module !== 'undefined' && module.exports;
+        return !hasWindowObject() && typeof module !== 'undefined' && module.exports;
     }
 
     /**
