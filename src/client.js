@@ -88,6 +88,7 @@ class Client extends EventEmitter {
      * @return {Client}
      */
     static init(opts, token) {
+        console.warn('This SDK is a work in progress, use at your own discretion');
         const client = new Client(opts, token);
 
         // When a valid token is present return early
