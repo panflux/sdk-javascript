@@ -282,30 +282,36 @@ class Client extends EventEmitter {
     /**
      * This function will handle an incoming request with query params
      *
-     * @param {string} query
-     * @param {string} returnUrl
+     * @param {string|Object} result An URL encoded query string or an object containing the result from the auth call.
+     * @param {string} returnUrl The return URL registered with the application in Panflux. Will be used when fetching a token.
      *
-     * @return {Client}
+     * @return {Promise<bool>}
      */
-    handleBrowserResult(query, returnUrl) {
-        const o = {};
-        query.replace(/([^=&]+)=([^&]*)/g, (m, key, value) => {
-            o[decodeURIComponent(key)] = decodeURIComponent(value);
-        });
+    async handleBrowserResult(result, returnUrl) {
+        let o = {};
+        if (typeof result === 'string') {
+            result.replace(/([^=&]+)=([^&]*)/g, (m, key, value) => {
+                o[decodeURIComponent(key)] = decodeURIComponent(value);
+            });
+        } else if (typeof result === 'object') {
+            o = result;
+        } else {
+            return Promise.reject(new Error('Result variable is not a string or an object'));
+        }
         // check for any incoming errors
-        if (o.state && o.error) {
-            return this._handleCodeError(o);
+        if (o.error) {
+            return Promise.reject(this._handleCodeError(o));
         }
         // we only accept requests with a code and a state
         if (undefined === o.code || undefined === o.state) {
-            return this;
+            return Promise.resolve(false);
         }
         this._verifyAuthResponse(o.code, o.state);
 
         this._resolving = true;
         this._handleCodeSuccess(o.code, returnUrl);
 
-        return this;
+        return Promise.resolve(true);
     }
 
     /**
