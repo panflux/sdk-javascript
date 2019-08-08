@@ -112,7 +112,7 @@ class Client extends EventEmitter {
         } else if (this._isNodeJS()) {
             return Promise.resolve(this.authenticate());
         }
-        throw new Error('The Panflux SDK has no way to determine the platform you\'re using');
+        return Promise.reject(new Error('The Panflux SDK has no way to determine the platform you\'re using'));
     }
 
     /**
