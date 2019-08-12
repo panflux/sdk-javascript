@@ -178,7 +178,7 @@ class Client extends EventEmitter {
      * @return {Promise<ApolloLink>}
      */
     async connect() {
-        return (this._token ? Promise.resolve(this._token) : this.authenticate())
+        return (this._token ? Promise.resolve(this._token) : this.login())
             .then((token) => {
                 const uri = (token.edges[0]) + '/graphql';
                 return ApolloLink.from([
