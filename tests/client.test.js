@@ -13,7 +13,7 @@ const testConfig = require('./testConfig');
 
 const dummyToken = {
     access_token: 'fake',
-    edges: ['http://example.org'],
+    edges: ['https://example.org'],
     expire_time: (+new Date() / 1000) + 3600,
     expires_in: 3600,
     refresh_token: 'fake',
@@ -27,6 +27,18 @@ nock('https://panflux.app')
     }).reply(400).persist()
     .post('/oauth/v2/authorize').reply(200).persist()
     .post('/oauth/v2/token').reply(200, JSON.stringify(dummyToken)).persist();
+
+// register some mock URL's for edge
+nock('https://example.org')
+    .post('/graphql', (body) => {
+        return body.operationName && body.operationName.trim() == 'Me';
+    }).reply(200, '{"data":{"me": {"id":"44b1e286-5598-4e00-aadb-72a6080eecf4"}}, "errors":[]}').persist()
+    .post('/graphql', (body) => {
+        return body.operationName && body.operationName.trim() == 'UserMe';
+    }).reply(200, '{"data":{"user":{"id":"44b1e286-5598-4e00-aadb-72a6080eecf4","name":"dummy"}}, "errors":[]}').persist();
+
+nock('ws://example.org')
+    .get().reply(500).persist();
 
 test('Client instantiation', async () => {
     const onNewToken = jest.fn();
@@ -46,15 +58,16 @@ test('Client instantiation', async () => {
     expect(client.token).toBe(token);
 
     // TODO Revamp this part when underlying code is fixed
-    // return client.query('query Me { me { id, name } }').then(async (response) => {
-    //     expect(response.me.id).toMatch(/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/);
+    return client.query('query Me { me { id, name } }').then(async (response) => {
+        expect(response.me.id).toMatch(/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/);
 
-    //     // Double check for parametrized queries
-    //     return client.query('query UserMe($id: UUID!) { user(id: $id) { id, name } }', {id: response.me.id}).then((nestedResponse) => {
-    //         expect(nestedResponse.user.id).toBe(response.me.id);
-    //         return Promise.resolve(JSON.stringify(nestedResponse));
-    //     });
-    // });
+        // Double check for parametrized queries
+        return client.query('query UserMe($id: UUID!) { user(id: $id) { id, name } }', {id: response.me.id}).then((nestedResponse) => {
+            console.log(nestedResponse);
+            expect(nestedResponse.user.id).toBe(response.me.id);
+            return Promise.resolve(JSON.stringify(nestedResponse));
+        });
+    });
 });
 
 test('Empty configuration', async () => {
