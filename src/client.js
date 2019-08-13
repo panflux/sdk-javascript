@@ -449,7 +449,7 @@ class Client extends EventEmitter {
 
         // Store the token so we can later verify if we requested the token
         if (undefined === window['localStorage']) {
-            console.error('No localStorage is present. State validation cannot be performed.');
+            console.warn('No localStorage is present. State validation cannot be performed.');
         } else {
             window.localStorage.setItem(STATE_TOKEN, token);
         }
@@ -472,7 +472,7 @@ class Client extends EventEmitter {
      */
     _verifyAuthResponse(code, state) {
         if (undefined === window['localStorage']) {
-            console.error('No localStorage is present. State validation cannot be performed.');
+            console.warn('No localStorage is present. State validation cannot be performed.');
         } else {
             const token = window.localStorage.getItem(STATE_TOKEN);
             if (token !== state) {

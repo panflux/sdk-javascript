@@ -37,6 +37,7 @@ nock('https://example.org')
         return body.operationName && body.operationName.trim() == 'UserMe';
     }).reply(200, '{"data":{"user":{"id":"44b1e286-5598-4e00-aadb-72a6080eecf4","name":"dummy"}}, "errors":[]}').persist();
 
+// This should stop the websocket Apollo link from trying
 nock('ws://example.org')
     .get().reply(500).persist();
 
@@ -57,7 +58,6 @@ test('Client instantiation', async () => {
     expect(onNewToken).toHaveBeenCalledWith(token);
     expect(client.token).toBe(token);
 
-    // TODO Revamp this part when underlying code is fixed
     return client.query('query Me { me { id, name } }').then(async (response) => {
         expect(response.me.id).toMatch(/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/);
 
@@ -78,18 +78,13 @@ test('Empty configuration', async () => {
     await expect(client.authenticate()).rejects.toThrow('ClientID and ClientSecret options are required');
 });
 
-// TODO revamp when underlying code is fixed
-// test('Invalid query', async () => {
-//     // This test may be slow on congested networks
-//     jest.setTimeout(15000);
-//     const onError = jest.fn();
+test('Invalid query', async () => {
+    // This test may be slow on congested networks
+    jest.setTimeout(15000);
 
-//     const client = Client.init(testConfig);
-//     client.on('error', onError);
-
-//     await expect(client.query('query { foo bar }')).rejects.toThrow(Error);
-//     expect(onError).toHaveBeenCalled();
-// });
+    const client = Client.init(testConfig);
+    await expect(client.query('query { foo bar }')).rejects.toThrow(Error);
+});
 
 test('Invalid credentials', async () => {
     const client = Client.init(Object.assign({}, testConfig, {clientID: '684'}));
