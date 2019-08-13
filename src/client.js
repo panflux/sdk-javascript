@@ -67,6 +67,7 @@ class Client extends EventEmitter {
     constructor(opts, token) {
         super();
 
+        this._token = null;
         opts = opts || {};
         if (opts.scope && Array.isArray(opts.scope)) {
             opts.scope = opts.scope.join(' ');
@@ -386,7 +387,7 @@ class Client extends EventEmitter {
             this.requestToken(code, returnUrl)
                 .then((token) => {
                     this._resolving = false;
-                    this._token = Promise.resolve(token);
+                    this._token = token;
 
                     return this;
                 })
@@ -509,7 +510,7 @@ class Client extends EventEmitter {
             this.requestToken(ev.data.code, location.origin)
                 .then((token) => {
                     this._resolving = false;
-                    this._token = Promise.resolve(token);
+                    this._token = token;
 
                     return this;
                 })
