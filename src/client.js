@@ -74,7 +74,7 @@ class Client extends EventEmitter {
         this._opts = Object.assign(defaultOpts, opts);
 
         if (token) {
-            this._token = Promise.resolve(token);
+            this._token = token;
         }
         this._resolving = false;
         this._codeVerifier = null;
@@ -164,6 +164,36 @@ class Client extends EventEmitter {
                 client_secret: this._opts.clientSecret,
                 scope: this._opts.scope || '',
             }),
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(runtime.validateResponse)
+            .then(this._returnToken.bind(this));
+    }
+
+    /**
+     * @param {Object} token
+     */
+    async refreshToken(token) {
+        if (!token.refresh_token) {
+            return Promise.reject(new Error('The provided token does not have a refresh_token'));
+        }
+        const opts = {
+            grant_type: 'refresh_token',
+            refresh_token: token.refresh_token,
+        };
+        if (this._opts.client_secret) {
+            opts['client_secret'] = this._opts.client_secret;
+        } else {
+            if (this._opts.sameWindow && window.localStorage) {
+                this._codeVerifier = window.localStorage.getItem('verifier');
+            }
+            opts['code_verifier'] = this._codeVerifier;
+        }
+        return fetch(this._opts.tokenURL, {
+            method: 'POST',
+            body: JSON.stringify(opts),
             headers: {
                 'Content-Type': 'application/json',
             },
