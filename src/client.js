@@ -68,6 +68,7 @@ class Client extends EventEmitter {
         super();
 
         this._token = null;
+        this._refreshTimer = 0;
         opts = opts || {};
         if (opts.scope && Array.isArray(opts.scope)) {
             opts.scope = opts.scope.join(' ');
@@ -75,7 +76,7 @@ class Client extends EventEmitter {
         this._opts = Object.assign(defaultOpts, opts);
 
         if (token) {
-            this._token = token;
+            this.token = token;
         }
         this._resolving = false;
         this._codeVerifier = null;
@@ -312,6 +313,16 @@ class Client extends EventEmitter {
         return this._token;
     }
 
+    /** @param {Object} token */
+    set token(token) {
+        this._token = token;
+
+        // set a refresh timeout
+        this._refreshTimer = setTimeout(() => {
+            this.refreshToken(token);
+        }, token.expire_time - ((+new Date() - 60000) / 1000));
+    }
+
     /** @return {boolean} */
     get resolving() {
         return this._resolving;
@@ -399,7 +410,7 @@ class Client extends EventEmitter {
             this.requestToken(code, returnUrl)
                 .then((token) => {
                     this._resolving = false;
-                    this._token = token;
+                    this.token = token;
 
                     return this;
                 })
@@ -485,7 +496,7 @@ class Client extends EventEmitter {
             throw Error('Returned token must reference edges to be used in API');
         }
 
-        this._token = token;
+        this.token = token;
         // if an token function was provided let that handle the error.
         this.emit('newToken', token);
         return token;
@@ -522,7 +533,7 @@ class Client extends EventEmitter {
             this.requestToken(ev.data.code, location.origin)
                 .then((token) => {
                     this._resolving = false;
-                    this._token = token;
+                    this.token = token;
 
                     return this;
                 })
