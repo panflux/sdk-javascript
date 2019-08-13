@@ -1,4 +1,5 @@
 import cryptoJS from 'crypto-js';
+import cryptoRandomString from 'crypto-random-string';
 
 /**
  * @param {string} string
@@ -13,9 +14,7 @@ function base64URL(string) {
  * @return {string}
  */
 function generateRandomString(len) {
-    const arr = new Uint8Array((len || 40) / 2);
-    window.crypto.getRandomValues(arr);
-    return Array.from(arr, (dec) => ('0' + dec.toString(16)).substr(-2)).join('');
+    return cryptoRandomString({length: (len || 40)});
 }
 
 export default {
@@ -51,12 +50,12 @@ export default {
      * This function should be chained to a fetch request Promise to process the response parameters
      *
      * @param {object} response
-     * @return {*}
+     * @return {Promise<Object>}
      */
-    validateResponse: function(response) {
+    validateResponse: async function(response) {
         if (response.status !== 200) {
-            throw Error(response.statusText);
+            return Promise.reject(new Error(response.statusText));
         }
-        return response.json();
+        return Promise.resolve(response.json());
     },
 };
