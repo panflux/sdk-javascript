@@ -39,7 +39,7 @@ test('Invalid token handling', async () => {
     })));
 
     const client = Client.init(testConfig);
-    expect(client.authenticate()).rejects.toThrow();
+    await expect(client.authenticate()).rejects.toThrow();
 });
 
 test('Scope joining and retrieval', async () => {

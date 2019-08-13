@@ -34,7 +34,7 @@ test('Client instantiation', async () => {
 
 test('Empty configuration', async () => {
     const client = Client.init();
-    expect(client.authenticate()).rejects.toThrow('ClientID and ClientSecret options are required');
+    await expect(client.authenticate()).rejects.toThrow('ClientID and ClientSecret options are required');
 });
 
 test('Invalid query', async () => {
