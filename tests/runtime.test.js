@@ -41,7 +41,7 @@ test('Resolve good request', async () => {
     };
 
     await runtime.validateResponse(resp);
-    expect(json).toHaveBeCalled();
+    expect(json).toHaveBeenCalled();
 });
 
 test('Resolve bad request', async () => {
