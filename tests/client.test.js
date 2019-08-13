@@ -63,7 +63,6 @@ test('Client instantiation', async () => {
 
         // Double check for parametrized queries
         return client.query('query UserMe($id: UUID!) { user(id: $id) { id, name } }', {id: response.me.id}).then((nestedResponse) => {
-            console.log(nestedResponse);
             expect(nestedResponse.user.id).toBe(response.me.id);
             return Promise.resolve(JSON.stringify(nestedResponse));
         });
@@ -71,6 +70,7 @@ test('Client instantiation', async () => {
 });
 
 test('Empty configuration', async () => {
+    // we explicitly set the values to undefined since it seems to hold data from earlier tests.
     const client = Client.init({
         clientID: undefined,
         clientSecret: undefined,
@@ -90,6 +90,85 @@ test('Invalid credentials', async () => {
     const client = Client.init(Object.assign({}, testConfig, {clientID: '684'}));
 
     await expect(client.authenticate()).rejects.toThrow(Error);
+});
+
+test('Channel token message handling', async () => {
+    const client = Client.init(testConfig);
+    const ev = {
+        data: {
+            type: 'panflux_token',
+            code: 'dummy',
+        },
+    };
+
+    client._onChannelMessage(ev);
+    expect(client.resolving).toBe(true);
+});
+
+test('Channel error message handling', async () => {
+    const client = Client.init(testConfig);
+    const data = {
+        type: 'panflux_oauth_error',
+        message: 'dummy',
+    };
+    const ev = {
+        data: data,
+    };
+    const fn = jest.fn();
+    client.on('oauthError', fn);
+
+    client._onChannelMessage(ev);
+    expect(fn).toHaveBeenCalledWith(data);
+
+    // this should not cause some wild exception.
+    client._onChannelMessage();
+});
+
+test('Run the code to login from a browser in a new window', () => {
+    const openFn = jest.fn();
+
+    // construct a mock window object
+    global.window = Object.create(window);
+    global.window.open = openFn;
+
+    const config = {ClientID: testConfig.ClientID, sameWindow: false};
+    const client = Client.init(config);
+    client._loginFromBrowser();
+
+    expect(openFn).toHaveBeenCalledWith(expect.stringMatching(/https:\/\/panflux\.app\/oauth\/v2\/authorize\?response_type=code*/));
+});
+
+test('Run the code to login from a browser in the new window', () => {
+    // construct a mock window object
+    global.window = Object.create(window);
+    Object.defineProperty(window, 'location', {
+        value: {
+            href: '',
+        },
+        writable: true,
+    });
+
+    const config = {ClientID: testConfig.ClientID, sameWindow: true};
+    const client = Client.init(config);
+    client._loginFromBrowser();
+
+    expect(global.window.location.href).toEqual(expect.stringMatching(/https:\/\/panflux\.app\/oauth\/v2\/authorize\?response_type=code*/));
+});
+
+test('Handle browser result', async () => {
+    const config = {ClientID: testConfig.ClientID, sameWindow: true};
+    const client = Client.init(config);
+
+    // construct a mock window object
+    global.window = Object.create(window);
+    window.localStorage.setItem('panflux_token', 'state');
+
+    const result = await client.handleBrowserResult({
+        code: 'code',
+        state: 'state',
+    }, 'https://return.url');
+
+    expect(result).toBe(true);
 });
 
 // TODO revamp when underlying code is fixed

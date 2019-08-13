@@ -524,7 +524,7 @@ class Client extends EventEmitter {
      * @private
      */
     _onChannelMessage(ev) {
-        if (undefined === ev.data.type) {
+        if (undefined === ev || undefined === ev.data || undefined === ev.data.type) {
             return;
         }
         switch (ev.data.type) {
