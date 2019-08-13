@@ -156,7 +156,7 @@ class Client extends EventEmitter {
      */
     async authenticate() {
         if (!this._opts.clientID || !this._opts.clientSecret) {
-            throw Error('ClientID and ClientSecret options are required to use OAuth2 client credentials grant');
+            return Promise.reject(new Error('ClientID and ClientSecret options are required to use OAuth2 client credentials grant'));
         }
         return fetch(this._opts.tokenURL, {
             method: 'POST',
@@ -210,7 +210,7 @@ class Client extends EventEmitter {
      * @return {Promise<ApolloLink>}
      */
     async connect() {
-        return (this.hasValidToken)
+        return Promise.resolve(this.hasValidToken)
             .then((validToken) => {
                 if (!validToken) {
                     return Promise.reject(new Error('Token is no longer valid'));
@@ -298,7 +298,7 @@ class Client extends EventEmitter {
      * @return {Promise<ApolloLink>}
      */
     async getLink() {
-        if (this.hasValidToken) {
+        if (!this.hasValidToken) {
             this._token = this._apollo = null;
             return Promise.reject(new Error('Token is no longer valid'));
         }
@@ -330,7 +330,7 @@ class Client extends EventEmitter {
 
     /** @return {boolean} */
     get hasValidToken() {
-        return this._token && ((Date.now() / 1000) + 5000) > this._token.expire_time;
+        return this._token && ((+Date.now() / 1000) + 300) < this._token.expire_time;
     }
 
     /**
