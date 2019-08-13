@@ -67,6 +67,8 @@ class Client extends EventEmitter {
     constructor(opts, token) {
         super();
 
+        this._token = null;
+        this._refreshTimer = 0;
         opts = opts || {};
         if (opts.scope && Array.isArray(opts.scope)) {
             opts.scope = opts.scope.join(' ');
@@ -74,7 +76,7 @@ class Client extends EventEmitter {
         this._opts = Object.assign(defaultOpts, opts);
 
         if (token) {
-            this._token = Promise.resolve(token);
+            this.token = token;
         }
         this._resolving = false;
         this._codeVerifier = null;
@@ -112,7 +114,7 @@ class Client extends EventEmitter {
         } else if (this._isNodeJS()) {
             return Promise.resolve(this.authenticate());
         }
-        throw new Error('The Panflux SDK has no way to determine the platform you\'re using');
+        return Promise.reject(new Error('The Panflux SDK has no way to determine the platform you\'re using'));
     }
 
     /**
@@ -173,12 +175,48 @@ class Client extends EventEmitter {
     }
 
     /**
+     * @param {Object} token
+     */
+    async refreshToken(token) {
+        if (!token.refresh_token) {
+            return Promise.reject(new Error('The provided token does not have a refresh_token'));
+        }
+        const opts = {
+            grant_type: 'refresh_token',
+            refresh_token: token.refresh_token,
+        };
+        if (this._opts.client_secret) {
+            opts['client_secret'] = this._opts.client_secret;
+        } else {
+            if (this._opts.sameWindow && window.localStorage) {
+                this._codeVerifier = window.localStorage.getItem('verifier');
+            }
+            opts['code_verifier'] = this._codeVerifier;
+        }
+        return fetch(this._opts.tokenURL, {
+            method: 'POST',
+            body: JSON.stringify(opts),
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(runtime.validateResponse)
+            .then(this._returnToken.bind(this));
+    }
+
+    /**
      * Prepare GraphQL connections based on configured parameters and token.
      *
      * @return {Promise<ApolloLink>}
      */
     async connect() {
-        return (this._token ? Promise.resolve(this._token) : this.authenticate())
+        return (this.hasValidToken)
+            .then((validToken) => {
+                if (!validToken) {
+                    return Promise.reject(new Error('Token is no longer valid'));
+                }
+                return Promise.resolve(this.token);
+            })
             .then((token) => {
                 const uri = (token.edges[0]) + '/graphql';
                 return ApolloLink.from([
@@ -260,8 +298,9 @@ class Client extends EventEmitter {
      * @return {Promise<ApolloLink>}
      */
     async getLink() {
-        if (this._token && ((Date.now() / 1000) + 5000) > this._token.expire_time) {
+        if (this.hasValidToken) {
             this._token = this._apollo = null;
+            return Promise.reject(new Error('Token is no longer valid'));
         }
         if (!this._apollo) {
             this._apollo = this.connect();
@@ -274,38 +313,59 @@ class Client extends EventEmitter {
         return this._token;
     }
 
+    /** @param {Object} token */
+    set token(token) {
+        this._token = token;
+
+        // set a refresh timeout
+        this._refreshTimer = setTimeout(() => {
+            this.refreshToken(token);
+        }, token.expire_time - ((+new Date() - 60000) / 1000));
+    }
+
     /** @return {boolean} */
     get resolving() {
         return this._resolving;
     }
 
+    /** @return {boolean} */
+    get hasValidToken() {
+        return this._token && ((Date.now() / 1000) + 5000) > this._token.expire_time;
+    }
+
     /**
      * This function will handle an incoming request with query params
      *
-     * @param {string} query
-     * @param {string} returnUrl
+     * @param {string|Object} result An URL encoded query string or an object containing the result from the auth call.
+     * @param {string} returnUrl The return URL registered with the application in Panflux. Will be used when fetching a token.
      *
-     * @return {Client}
+     * @return {Promise<bool>}
      */
-    handleBrowserResult(query, returnUrl) {
-        const o = {};
-        query.replace(/([^=&]+)=([^&]*)/g, (m, key, value) => {
-            o[decodeURIComponent(key)] = decodeURIComponent(value);
-        });
+    async handleBrowserResult(result, returnUrl) {
+        let o = {};
+        if (typeof result === 'string') {
+            result.replace(/([^=&]+)=([^&]*)/g, (m, key, value) => {
+                o[decodeURIComponent(key)] = decodeURIComponent(value);
+            });
+        } else if (typeof result === 'object') {
+            o = result;
+        } else {
+            return Promise.reject(new Error('Result variable is not a string or an object'));
+        }
         // check for any incoming errors
-        if (o.state && o.error) {
-            return this._handleCodeError(o);
+        if (o.error) {
+            return Promise.reject(this._handleCodeError(o));
         }
         // we only accept requests with a code and a state
         if (undefined === o.code || undefined === o.state) {
-            return this;
+            return Promise.resolve(false);
         }
         this._verifyAuthResponse(o.code, o.state);
 
         this._resolving = true;
         this._handleCodeSuccess(o.code, returnUrl);
 
-        return this;
+        return Promise.resolve(true);
     }
 
     /**
@@ -350,7 +410,7 @@ class Client extends EventEmitter {
             this.requestToken(code, returnUrl)
                 .then((token) => {
                     this._resolving = false;
-                    this._token = Promise.resolve(token);
+                    this.token = token;
 
                     return this;
                 })
@@ -436,7 +496,7 @@ class Client extends EventEmitter {
             throw Error('Returned token must reference edges to be used in API');
         }
 
-        this._token = token;
+        this.token = token;
         // if an token function was provided let that handle the error.
         this.emit('newToken', token);
         return token;
@@ -473,7 +533,7 @@ class Client extends EventEmitter {
             this.requestToken(ev.data.code, location.origin)
                 .then((token) => {
                     this._resolving = false;
-                    this._token = Promise.resolve(token);
+                    this.token = token;
 
                     return this;
                 })
