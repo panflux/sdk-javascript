@@ -209,7 +209,13 @@ class Client extends EventEmitter {
      * @return {Promise<ApolloLink>}
      */
     async connect() {
-        return (this._token ? Promise.resolve(this._token) : this.login())
+        return (this.hasValidToken)
+            .then((validToken) => {
+                if (!validToken) {
+                    return Promise.reject(new Error('Token is no longer valid'));
+                }
+                return Promise.resolve(this.token);
+            })
             .then((token) => {
                 const uri = (token.edges[0]) + '/graphql';
                 return ApolloLink.from([
@@ -291,8 +297,9 @@ class Client extends EventEmitter {
      * @return {Promise<ApolloLink>}
      */
     async getLink() {
-        if (this._token && ((Date.now() / 1000) + 5000) > this._token.expire_time) {
+        if (this.hasValidToken) {
             this._token = this._apollo = null;
+            return Promise.reject(new Error('Token is no longer valid'));
         }
         if (!this._apollo) {
             this._apollo = this.connect();
@@ -308,6 +315,11 @@ class Client extends EventEmitter {
     /** @return {boolean} */
     get resolving() {
         return this._resolving;
+    }
+
+    /** @return {boolean} */
+    get hasValidToken() {
+        return this._token && ((Date.now() / 1000) + 5000) > this._token.expire_time;
     }
 
     /**
