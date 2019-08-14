@@ -156,7 +156,7 @@ class Client extends EventEmitter {
      */
     async authenticate() {
         if (!this._opts.clientID || !this._opts.clientSecret) {
-            throw Error('ClientID and ClientSecret options are required to use OAuth2 client credentials grant');
+            return Promise.reject(new Error('ClientID and ClientSecret options are required to use OAuth2 client credentials grant'));
         }
         return fetch(this._opts.tokenURL, {
             method: 'POST',
@@ -210,7 +210,7 @@ class Client extends EventEmitter {
      * @return {Promise<ApolloLink>}
      */
     async connect() {
-        return (this.hasValidToken)
+        return Promise.resolve(this.hasValidToken)
             .then((validToken) => {
                 if (!validToken) {
                     return Promise.reject(new Error('Token is no longer valid'));
@@ -298,7 +298,7 @@ class Client extends EventEmitter {
      * @return {Promise<ApolloLink>}
      */
     async getLink() {
-        if (this.hasValidToken) {
+        if (!this.hasValidToken) {
             this._token = this._apollo = null;
             return Promise.reject(new Error('Token is no longer valid'));
         }
@@ -330,7 +330,7 @@ class Client extends EventEmitter {
 
     /** @return {boolean} */
     get hasValidToken() {
-        return this._token && ((Date.now() / 1000) + 5000) > this._token.expire_time;
+        return this._token && ((+Date.now() / 1000) + 300) < this._token.expire_time;
     }
 
     /**
@@ -449,7 +449,7 @@ class Client extends EventEmitter {
 
         // Store the token so we can later verify if we requested the token
         if (undefined === window['localStorage']) {
-            console.error('No localStorage is present. State validation cannot be performed.');
+            console.warn('No localStorage is present. State validation cannot be performed.');
         } else {
             window.localStorage.setItem(STATE_TOKEN, token);
         }
@@ -472,7 +472,7 @@ class Client extends EventEmitter {
      */
     _verifyAuthResponse(code, state) {
         if (undefined === window['localStorage']) {
-            console.error('No localStorage is present. State validation cannot be performed.');
+            console.warn('No localStorage is present. State validation cannot be performed.');
         } else {
             const token = window.localStorage.getItem(STATE_TOKEN);
             if (token !== state) {
@@ -524,7 +524,7 @@ class Client extends EventEmitter {
      * @private
      */
     _onChannelMessage(ev) {
-        if (undefined === ev.data.type) {
+        if (undefined === ev || undefined === ev.data || undefined === ev.data.type) {
             return;
         }
         switch (ev.data.type) {

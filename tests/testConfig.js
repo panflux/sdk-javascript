@@ -9,7 +9,6 @@
 require('dotenv').config();
 
 module.exports = {
-    tokenURL: process.env.TOKEN_URL,
-    clientID: process.env.CLIENT_ID,
-    clientSecret: process.env.CLIENT_SECRET,
+    clientID: '[secure]',
+    clientSecret: '[secure]',
 };
