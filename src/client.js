@@ -130,8 +130,8 @@ class Client extends EventEmitter {
             redirect_uri: returnUrl,
             code: code,
         };
-        if (this._opts.client_secret) {
-            opts['client_secret'] = this._opts.client_secret;
+        if (this._opts.clientSecret) {
+            opts['client_secret'] = this._opts.clientSecret;
         } else {
             if (this._opts.sameWindow && window.localStorage) {
                 this._codeVerifier = window.localStorage.getItem('verifier');
@@ -184,15 +184,17 @@ class Client extends EventEmitter {
         const opts = {
             grant_type: 'refresh_token',
             refresh_token: token.refresh_token,
+            client_id: this._opts.clientID,
         };
         if (this._opts.client_secret) {
-            opts['client_secret'] = this._opts.client_secret;
+            opts['client_secret'] = this._opts.clientSecret;
         } else {
             if (this._opts.sameWindow && window.localStorage) {
                 this._codeVerifier = window.localStorage.getItem('verifier');
             }
             opts['code_verifier'] = this._codeVerifier;
         }
+
         return fetch(this._opts.tokenURL, {
             method: 'POST',
             body: JSON.stringify(opts),
@@ -320,7 +322,7 @@ class Client extends EventEmitter {
         // set a refresh timeout
         this._refreshTimer = setTimeout(() => {
             this.refreshToken(token);
-        }, token.expire_time - ((+new Date() - 60000) / 1000));
+        }, (token.expire_time - ((+new Date() - 60000) / 1000)) * 1000);
     }
 
     /** @return {boolean} */

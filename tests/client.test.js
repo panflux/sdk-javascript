@@ -69,6 +69,11 @@ test('Client instantiation', async () => {
     });
 });
 
+test('Client initialization with token', () => {
+    const client = Client.init(testConfig, dummyToken);
+    expect(client.token).not.toBe(null);
+});
+
 test('Empty configuration', async () => {
     // we explicitly set the values to undefined since it seems to hold data from earlier tests.
     const client = Client.init({
@@ -76,6 +81,20 @@ test('Empty configuration', async () => {
         clientSecret: undefined,
     });
     await expect(client.authenticate()).rejects.toThrow('ClientID and ClientSecret options are required');
+});
+
+test('Test login query in browser', async () => {
+    const client = Client.init(Object.assign(testConfig, {sameWindow: true}));
+    global.window = Object.create(window);
+    Object.defineProperty(window, 'location', {
+        value: {
+            href: '',
+        },
+        writable: true,
+    });
+
+    await client.login();
+    expect(global.window.location.href).toEqual(expect.stringMatching(/https:\/\/panflux\.app\/oauth\/v2\/authorize\?response_type=code*/));
 });
 
 test('Invalid query', async () => {
@@ -169,6 +188,17 @@ test('Handle browser result', async () => {
     }, 'https://return.url');
 
     expect(result).toBe(true);
+});
+
+test('Refresh token', async () => {
+    const config = {
+        ClientID: testConfig.ClientID,
+    };
+    const client = Client.init(config);
+    const token = await client.refreshToken(dummyToken);
+
+    expect(token).not.toBe(null);
+    expect(token.access_token).toEqual('fake');
 });
 
 // TODO revamp when underlying code is fixed
