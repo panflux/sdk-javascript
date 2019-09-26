@@ -59,11 +59,11 @@ test('Client instantiation', async () => {
     expect(client.token).toBe(token);
 
     return client.query('query Me { me { id, name } }').then(async (response) => {
-        expect(response.me.id).toMatch(/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/);
+        expect(response.data.me.id).toMatch(/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/);
 
         // Double check for parametrized queries
-        return client.query('query UserMe($id: UUID!) { user(id: $id) { id, name } }', {id: response.me.id}).then((nestedResponse) => {
-            expect(nestedResponse.user.id).toBe(response.me.id);
+        return client.query('query UserMe($id: UUID!) { user(id: $id) { id, name } }', {id: response.data.me.id}).then((nestedResponse) => {
+            expect(nestedResponse.data.user.id).toBe(response.data.me.id);
             return Promise.resolve(JSON.stringify(nestedResponse));
         });
     });

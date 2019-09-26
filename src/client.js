@@ -262,7 +262,6 @@ class Client extends EventEmitter {
     async query(query, variables) {
         return this.getLink()
             .then((link) => makePromise(execute(link, {query: gql(query), variables})))
-            .then((response) => response.data)
         ;
     }
 
