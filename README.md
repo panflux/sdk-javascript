@@ -35,8 +35,13 @@ const client = Client.init({
 Do a simple query:
 ```js
 client.query('query { me { id, name } }')
-    .then(({me}) => {
-        console.info(`Authenticated as ${me.name}`);
+    .then(({data, errors}) => {
+        if (errors) {
+            console.log(errors);
+        }
+        if (data) {
+            console.info(`Authenticated as ${data.me.name}`);
+        }
     });
 ```
 Or with variables:
