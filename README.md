@@ -48,8 +48,8 @@ Or with variables:
 ```js
 client.query('query result($id: UUID!) { user(id: $id) { id, name } }', {
     'id' => 'your-user-id',    
-}).then(({result}) => {
-    console.info(`Authenticated as ${result.name}`);
+}).then(({data}) => {
+    console.info(`Authenticated as ${data.result.name}`);
 });
 ```
 Subscribe to ping tests:
