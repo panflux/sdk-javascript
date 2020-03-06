@@ -322,7 +322,7 @@ class Client extends EventEmitter {
         this._refreshTimer = setTimeout(() => {
             this.refreshToken(token).catch((err) => {
                 console.error('Error when refreshing token:', err);
-                this.login();
+                this.login().catch((err) => console.err(err));
             });
         }, (token.expire_time - ((+new Date() - 60000) / 1000)) * 1000);
     }
