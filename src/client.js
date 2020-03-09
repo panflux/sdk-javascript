@@ -31,6 +31,7 @@ const defaultOpts = {
     tokenURL: DEFAULT_TOKEN_URL,
     state: '',
     sameWindow: false,
+    returnURL: '',
 };
 
 /**
@@ -439,11 +440,15 @@ class Client extends EventEmitter {
         } else if (this._opts.sameWindow && !window.localStorage) {
             throw new Error('No localStorage present, you cannot use sameWindow option');
         }
+        let returnURL = location.origin;
+        if (this._opts.returnURL !== '') {
+            returnURL = this._opts.returnURL;
+        }
         const url = this._opts.authURL || DEFAULT_AUTHORIZE_URL;
         const token = runtime.generateCSRF();
         const q = Object.entries({
             response_type: 'code',
-            redirect_uri: location.origin,
+            redirect_uri: returnURL,
             scope: this._opts.scope,
             client_id: this._opts.clientID,
             code_challenge: runtime.generateCodeChallenge(this._codeVerifier),
