@@ -31,6 +31,7 @@ const defaultOpts = {
     tokenURL: DEFAULT_TOKEN_URL,
     state: '',
     sameWindow: false,
+    returnURL: '',
 };
 
 /**
@@ -299,8 +300,9 @@ class Client extends EventEmitter {
      * @return {Promise<ApolloLink>}
      */
     async getLink() {
+        await this._validateToken();
         if (!this.hasValidToken) {
-            this._token = this._apollo = null;
+            this._apollo = null;
             return Promise.reject(new Error('Token is no longer valid'));
         }
         if (!this._apollo) {
@@ -439,11 +441,15 @@ class Client extends EventEmitter {
         } else if (this._opts.sameWindow && !window.localStorage) {
             throw new Error('No localStorage present, you cannot use sameWindow option');
         }
+        let returnURL = location.origin;
+        if (this._opts.returnURL !== '') {
+            returnURL = this._opts.returnURL;
+        }
         const url = this._opts.authURL || DEFAULT_AUTHORIZE_URL;
         const token = runtime.generateCSRF();
         const q = Object.entries({
             response_type: 'code',
-            redirect_uri: location.origin,
+            redirect_uri: returnURL,
             scope: this._opts.scope,
             client_id: this._opts.clientID,
             code_challenge: runtime.generateCodeChallenge(this._codeVerifier),
@@ -546,6 +552,23 @@ class Client extends EventEmitter {
         case OAUTH_ERROR:
             this.emit('oauthError', ev.data);
             break;
+        }
+    }
+
+    /**
+     * @return {Promise<any>}
+     * @private
+     */
+    _validateToken() {
+        if (this.hasValidToken) {
+            return Promise.resolve(true);
+        }
+        if (this._token === null || this._token === undefined) {
+            return this.login()
+                .catch((err) => console.err(err));
+        } else {
+            return this.refreshToken(this._token)
+                .catch((err) => this.login().catch((err) => console.err(err)));
         }
     }
 }
