@@ -30,5 +30,8 @@ declare module "@panflux/sdk" {
         readonly resolving: boolean;
         readonly hasValidToken: boolean;
 
+        on(event: 'newToken', listener: (token: any) => void): void;
+        on(event: 'oauthError', listener: (errData: any) => void): void;
+        on(event: 'startTokenRefresh', listener: () => void): void;
     }
 }
