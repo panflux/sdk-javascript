@@ -196,6 +196,7 @@ class Client extends EventEmitter {
             opts['code_verifier'] = this._codeVerifier;
         }
         this._token = null; // clear token before refresh
+        this.emit('startTokenRefresh');
 
         return fetch(this._opts.tokenURL, {
             method: 'POST',
