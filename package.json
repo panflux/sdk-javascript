@@ -1,6 +1,6 @@
 {
   "name": "@panflux/sdk",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "Software Development Kit for Panflux API consumers",
   "repository": "github:panflux/sdk-javascript",
   "author": "Niels Keurentjes <niels.keurentjes@omines.com>",
@@ -53,6 +53,7 @@
     "babel-core": "7.0.0-bridge.0",
     "babel-eslint": "10.0.3",
     "babel-jest": "25.1.0",
+    "core-js": "^3.6.4",
     "dotenv": "8.2.0",
     "eslint": "6.8.0",
     "eslint-config-google": "0.14.0",
