@@ -440,7 +440,7 @@ class Client extends EventEmitter {
 
                     return this;
                 })
-                .then(client => client.hasValidToken)
+                .then((client) => client.hasValidToken)
                 .catch((err) => console.error(err));
         }
     }
