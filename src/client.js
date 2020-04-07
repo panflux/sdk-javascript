@@ -322,18 +322,20 @@ class Client extends EventEmitter {
     set token(token) {
         this._token = token;
 
-        // Set a refresh timeout based on the expiration time of the token
-        // TODO: Add semantics for notifying the consumer if refresh/relogin fails
-        this._refreshTimer = setTimeout(() => {
-            if (token.refresh_token) {
-                this.refreshToken(token).catch((err) => {
-                    console.error('Error when refreshing token:', err);
+        if (this.hasValidToken) {
+            // Set a refresh timeout based on the expiration time of the token
+            // TODO: Add semantics for notifying the consumer if refresh/relogin fails
+            this._refreshTimer = setTimeout(() => {
+                if (token.refresh_token) {
+                    this.refreshToken(token).catch((err) => {
+                        console.error('Error when refreshing token:', err);
+                        this.login().catch((err) => console.error(err));
+                    });
+                } else {
                     this.login().catch((err) => console.error(err));
-                });
-            } else {
-                this.login().catch((err) => console.error(err));
-            }
-        }, (token.expire_time - ((+new Date() - 60000) / 1000)) * 1000);
+                }
+            }, (token.expire_time - ((+new Date() - 60000) / 1000)) * 1000);
+        }
     }
 
     /** @return {boolean} */
