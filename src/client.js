@@ -195,6 +195,8 @@ class Client extends EventEmitter {
             }
             opts['code_verifier'] = this._codeVerifier;
         }
+        this._token = null; // clear token before refresh
+        this.emit('startTokenRefresh');
 
         return fetch(this._opts.tokenURL, {
             method: 'POST',
@@ -320,18 +322,20 @@ class Client extends EventEmitter {
     set token(token) {
         this._token = token;
 
-        // Set a refresh timeout based on the expiration time of the token
-        // TODO: Add semantics for notifying the consumer if refresh/relogin fails
-        this._refreshTimer = setTimeout(() => {
-            if (token.refresh_token) {
-                this.refreshToken(token).catch((err) => {
-                    console.error('Error when refreshing token:', err);
+        if (this.hasValidToken) {
+            // Set a refresh timeout based on the expiration time of the token
+            // TODO: Add semantics for notifying the consumer if refresh/relogin fails
+            this._refreshTimer = setTimeout(() => {
+                if (token.refresh_token) {
+                    this.refreshToken(token).catch((err) => {
+                        console.error('Error when refreshing token:', err);
+                        this.login().catch((err) => console.error(err));
+                    });
+                } else {
                     this.login().catch((err) => console.error(err));
-                });
-            } else {
-                this.login().catch((err) => console.error(err));
-            }
-        }, (token.expire_time - ((+new Date() - 60000) / 1000)) * 1000);
+                }
+            }, (token.expire_time - ((+new Date() - 60000) / 1000)) * 1000);
+        }
     }
 
     /** @return {boolean} */
@@ -353,6 +357,7 @@ class Client extends EventEmitter {
      * @return {Promise<bool>}
      */
     async handleBrowserResult(result, returnUrl) {
+        this._resolving = true;
         let o = {};
         if (typeof result === 'string') {
             result.replace(/([^=&]+)=([^&]*)/g, (m, key, value) => {
@@ -361,20 +366,28 @@ class Client extends EventEmitter {
         } else if (typeof result === 'object') {
             o = result;
         } else {
+            this._resolving = false;
             return Promise.reject(new Error('Result variable is not a string or an object'));
         }
         // check for any incoming errors
         if (o.error) {
+            this._resolving = false;
             return Promise.reject(this._handleCodeError(o));
         }
         // we only accept requests with a code and a state
         if (undefined === o.code || undefined === o.state) {
+            this._resolving = false;
             return Promise.resolve(false);
         }
         this._verifyAuthResponse(o.code, o.state);
 
-        this._resolving = true;
-        this._handleCodeSuccess(o.code, returnUrl);
+        try {
+            await this._handleCodeSuccess(o.code, returnUrl);
+        } catch (e) {
+            this._resolving = false;
+            return Promise.reject(e);
+        }
+        this._resolving = false;
 
         return Promise.resolve(true);
     }
@@ -406,8 +419,9 @@ class Client extends EventEmitter {
      *
      * @param {string} code
      * @param {string} returnUrl
+     * @return {Promise<boolean>}
      */
-    _handleCodeSuccess(code, returnUrl) {
+    async _handleCodeSuccess(code, returnUrl) {
         if (undefined !== channel) {
             // send message to other tabs so application can pick up further authorization
             channel.postMessage({
@@ -417,14 +431,16 @@ class Client extends EventEmitter {
         }
         if (!this._opts.sameWindow) {
             window.close();
+            return Promise.resolve(true);
         } else {
-            this.requestToken(code, returnUrl)
+            return this.requestToken(code, returnUrl)
                 .then((token) => {
                     this._resolving = false;
                     this.token = token;
 
                     return this;
                 })
+                .then((client) => client.hasValidToken)
                 .catch((err) => console.error(err));
         }
     }
@@ -567,6 +583,9 @@ class Client extends EventEmitter {
     _validateToken() {
         if (this.hasValidToken) {
             return Promise.resolve(true);
+        }
+        if (this._resolving) {
+            return Promise.resolve(false);
         }
         if (this._token === null || this._token === undefined) {
             return this.login()
