@@ -18,6 +18,7 @@ import WebSocket from 'isomorphic-ws';
 import fetch from 'cross-fetch';
 import gql from 'graphql-tag';
 import runtime from './runtime';
+import {LoginError, RefreshTokenError, RequestTokenError, GraphQLError} from './error';
 
 const STATE_TOKEN = 'panflux_token';
 const CHANNEL_NAME = 'panflux_channel';
@@ -227,7 +228,7 @@ class Client extends EventEmitter {
                 return ApolloLink.from([
                     new RetryLink({attempts: {retryIf: (error) => (error.statusCode !== 400)}}),
                     onError((params) => {
-                        this.emit('error', params);
+                        this.emit('error', new GraphQLError('', params));
                     }),
                     setContext(() => ({
                         headers: {
@@ -322,19 +323,8 @@ class Client extends EventEmitter {
     set token(token) {
         this._token = token;
 
-        if (this.hasValidToken) {
-            // Set a refresh timeout based on the expiration time of the token
-            // TODO: Add semantics for notifying the consumer if refresh/relogin fails
-            this._refreshTimer = setTimeout(() => {
-                if (token.refresh_token) {
-                    this.refreshToken(token).catch((err) => {
-                        console.error('Error when refreshing token:', err);
-                        this.login().catch((err) => console.error(err));
-                    });
-                } else {
-                    this.login().catch((err) => console.error(err));
-                }
-            }, (token.expire_time - ((+new Date() - 60000) / 1000)) * 1000);
+        if (this.hasValidToken || token.refresh_token) {
+            this._handleRefresh();
         }
     }
 
@@ -441,7 +431,7 @@ class Client extends EventEmitter {
                     return this;
                 })
                 .then((client) => client.hasValidToken)
-                .catch((err) => console.error(err));
+                .catch((err) => this.emit('error', new RequestTokenError('', err)));
         }
     }
 
@@ -568,7 +558,7 @@ class Client extends EventEmitter {
 
                     return this;
                 })
-                .catch((err) => console.error(err));
+                .catch((err) => this.emit('error', new RequestTokenError('', err)));
             break;
         case OAUTH_ERROR:
             this.emit('oauthError', ev.data);
@@ -589,10 +579,37 @@ class Client extends EventEmitter {
         }
         if (this._token === null || this._token === undefined) {
             return this.login()
-                .catch((err) => console.error(err));
+                .catch((err) => this.emit('error', new LoginError('', err)));
         } else {
             return this.refreshToken(this._token)
-                .catch((err) => this.login().catch((err) => console.error(err)));
+                .catch((err) => {
+                    this.emit('error', new RefreshTokenError('', err));
+                    this.login().catch((err) => this.emit('error', new LoginError('', err)));
+                });
+        }
+    }
+
+    /**
+     * @private
+     */
+    _handleRefresh() {
+        if (!this.hasValidToken && this.token.refresh_token) {
+            this.refreshToken(this.token).catch((err) => {
+                this.emit('error', new RefreshTokenError('', err));
+                this.login().catch((err) => this.emit('error', new LoginError('', err)));
+            });
+        } else {
+            // Set a refresh timeout based on the expiration time of the token
+            this._refreshTimer = setTimeout(() => {
+                if (this.token.refresh_token) {
+                    this.refreshToken(this.token).catch((err) => {
+                        this.emit('error', new RefreshTokenError('', err));
+                        this.login().catch((err) => this.emit('error', new LoginError('', err)));
+                    });
+                } else {
+                    this.login().catch((err) => this.emit('error', new LoginError('', err)));
+                }
+            }, (this.token.expire_time - ((+new Date() - 60000) / 1000)) * 1000);
         }
     }
 }
