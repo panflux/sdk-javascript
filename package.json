@@ -41,7 +41,7 @@
     "graphql": "^0.11.3 || ^0.12.3 || ^0.13.0 || ^14.0.0",
     "graphql-tag": "^2.10.0",
     "isomorphic-ws": "^4.0.1",
-    "subscriptions-transport-ws": "^0.9.15"
+    "subscriptions-transport-ws": "^0.11.0"
   },
   "devDependencies": {
     "@babel/cli": "7.15.7",
