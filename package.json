@@ -68,7 +68,7 @@
     "rollup": "2.26.5",
     "rollup-plugin-babel": "4.4.0",
     "rollup-plugin-filesize": "9.0.2",
-    "ws": "7.4.6"
+    "ws": "7.5.10"
   },
   "jest": {
     "collectCoverage": true,
